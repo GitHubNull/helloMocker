@@ -1,8 +1,11 @@
 package org.oxff.hellomocker.api;
 
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
+
 /**
- * Mock处理器接口
- * 供用户扩展JAR包时实现
+ * HTTP Mock 处理器接口
+ * 用户开发的 JAR 包需要实现此接口来处理请求
  *
  * @author oxff
  * @version 1.0
@@ -10,12 +13,12 @@ package org.oxff.hellomocker.api;
 public interface IMockHandler {
 
     /**
-     * 处理请求并返回响应
+     * 处理 HTTP 请求并返回响应
      *
-     * @param request 包含请求信息的对象
-     * @return 响应字节数组
+     * @param request HTTP 请求对象
+     * @return HTTP 响应对象
      */
-    byte[] handle(MockRequest request);
+    HttpResponse handleRequest(HttpRequest request);
 
     /**
      * 获取处理器名称
@@ -32,6 +35,22 @@ public interface IMockHandler {
      * @return 处理器描述
      */
     default String getDescription() {
-        return "Mock Handler";
+        return "Custom JAR handler";
+    }
+
+    /**
+     * 初始化处理器
+     * 在加载 JAR 并创建实例后调用
+     */
+    default void init() {
+        // 默认空实现，子类可重写
+    }
+
+    /**
+     * 销毁处理器
+     * 在卸载 JAR 或插件关闭时调用
+     */
+    default void destroy() {
+        // 默认空实现，子类可重写
     }
 }

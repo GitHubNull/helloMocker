@@ -80,6 +80,18 @@ public class ResponseConfig implements Serializable {
     @Builder.Default
     private boolean useSsl = false;
 
+    // ============ JAR扩展模式配置 ============
+
+    /**
+     * JAR文件路径
+     */
+    private String jarPath;
+
+    /**
+     * 处理器类全限定名
+     */
+    private String handlerClassName;
+
     /**
      * 响应类型枚举
      */
@@ -97,7 +109,12 @@ public class ResponseConfig implements Serializable {
         /**
          * 转发到上游服务器
          */
-        PROXY_FORWARD
+        PROXY_FORWARD,
+
+        /**
+         * JAR扩展动态处理
+         */
+        JAR_EXTENSION
     }
 
     /**
@@ -112,6 +129,7 @@ public class ResponseConfig implements Serializable {
             case PYTHON_SCRIPT -> isPythonScriptValid();
             case STATIC -> isStaticResponseValid();
             case PROXY_FORWARD -> isProxyForwardValid();
+            case JAR_EXTENSION -> isJarExtensionValid();
             default -> false;
         };
     }
@@ -138,6 +156,14 @@ public class ResponseConfig implements Serializable {
     private boolean isProxyForwardValid() {
         return targetHost != null && !targetHost.trim().isEmpty()
                 && targetPort > 0 && targetPort <= 65535;
+    }
+
+    /**
+     * 检查JAR扩展配置是否有效
+     */
+    private boolean isJarExtensionValid() {
+        return jarPath != null && !jarPath.trim().isEmpty()
+                && handlerClassName != null && !handlerClassName.trim().isEmpty();
     }
 
     /**

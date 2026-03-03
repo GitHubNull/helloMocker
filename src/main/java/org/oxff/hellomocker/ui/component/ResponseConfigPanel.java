@@ -39,6 +39,9 @@ public class ResponseConfigPanel extends JPanel {
     private JSpinner targetPortSpinner;
     private JCheckBox useSslCheckBox;
 
+    // JAR扩展面板组件
+    private JarExtensionPanel jarExtensionPanel;
+
     public ResponseConfigPanel(MontoyaApi api) {
         this.api = api;
         initializeUI();
@@ -50,7 +53,7 @@ public class ResponseConfigPanel extends JPanel {
         // 响应类型选择
         JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         typePanel.add(new JLabel("Response Type:"));
-        String[] types = {"STATIC", "PYTHON_SCRIPT", "PROXY_FORWARD"};
+        String[] types = {"STATIC", "PYTHON_SCRIPT", "PROXY_FORWARD", "JAR_EXTENSION"};
         responseTypeCombo = new JComboBox<>(types);
         responseTypeCombo.addActionListener(e -> switchCard());
         typePanel.add(responseTypeCombo);
@@ -64,6 +67,7 @@ public class ResponseConfigPanel extends JPanel {
         cardsPanel.add(createStaticResponsePanel(), "STATIC");
         cardsPanel.add(createPythonScriptPanel(), "PYTHON_SCRIPT");
         cardsPanel.add(createProxyForwardPanel(), "PROXY_FORWARD");
+        cardsPanel.add(createJarExtensionPanel(), "JAR_EXTENSION");
 
         add(cardsPanel, BorderLayout.CENTER);
 
@@ -315,6 +319,11 @@ public class ResponseConfigPanel extends JPanel {
         return panel;
     }
 
+    private JPanel createJarExtensionPanel() {
+        jarExtensionPanel = new JarExtensionPanel();
+        return jarExtensionPanel;
+    }
+
     private void switchCard() {
         String selectedType = (String) responseTypeCombo.getSelectedItem();
         if (selectedType != null) {
@@ -543,6 +552,12 @@ public class ResponseConfigPanel extends JPanel {
                 builder.targetPort((Integer) targetPortSpinner.getValue());
                 builder.useSsl(useSslCheckBox.isSelected());
             }
+            case JAR_EXTENSION -> {
+                if (jarExtensionPanel != null) {
+                    builder.jarPath(jarExtensionPanel.getJarPath());
+                    builder.handlerClassName(jarExtensionPanel.getHandlerClassName());
+                }
+            }
         }
 
         return builder.build();
@@ -584,6 +599,16 @@ public class ResponseConfigPanel extends JPanel {
                 }
                 targetPortSpinner.setValue(config.getTargetPort());
                 useSslCheckBox.setSelected(config.isUseSsl());
+            }
+            case JAR_EXTENSION -> {
+                if (jarExtensionPanel != null) {
+                    if (config.getJarPath() != null) {
+                        jarExtensionPanel.setJarPath(config.getJarPath());
+                    }
+                    if (config.getHandlerClassName() != null) {
+                        jarExtensionPanel.setHandlerClassName(config.getHandlerClassName());
+                    }
+                }
             }
         }
     }

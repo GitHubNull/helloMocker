@@ -50,7 +50,7 @@ public class HelloMockerExtension implements BurpExtension {
             api.userInterface().registerSuiteTab("HelloMocker", mainPanel);
 
             // 注册HTTP处理器
-            MockHttpHandler httpHandler = new MockHttpHandler(ruleManager, configStorage, logging);
+            MockHttpHandler httpHandler = new MockHttpHandler(api, ruleManager, configStorage, logging);
             api.http().registerHttpHandler(httpHandler);
             logging.logToOutput("HTTP handler registered successfully");
 

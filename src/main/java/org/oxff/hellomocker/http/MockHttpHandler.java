@@ -1,10 +1,12 @@
 package org.oxff.hellomocker.http;
 
+import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.Annotations;
 import burp.api.montoya.http.handler.*;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.logging.Logging;
+import org.oxff.hellomocker.handler.JarExtensionHandler;
 import org.oxff.hellomocker.handler.ProxyForwardHandler;
 import org.oxff.hellomocker.handler.PythonScriptHandler;
 import org.oxff.hellomocker.model.MockContext;
@@ -30,22 +32,26 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MockHttpHandler implements HttpHandler {
 
+    private final MontoyaApi api;
     private final MockRuleManager ruleManager;
     private final ConfigStorage configStorage;
     private final Logging logging;
     private final PythonScriptHandler pythonScriptHandler;
     private final ProxyForwardHandler proxyForwardHandler;
+    private final JarExtensionHandler jarExtensionHandler;
 
     // 用于存储当前正在处理的请求和规则映射
     // Key: messageId, Value: ruleId
     private final Map<Integer, String> activeMockRequests;
 
-    public MockHttpHandler(MockRuleManager ruleManager, ConfigStorage configStorage, Logging logging) {
+    public MockHttpHandler(MontoyaApi api, MockRuleManager ruleManager, ConfigStorage configStorage, Logging logging) {
+        this.api = api;
         this.ruleManager = ruleManager;
         this.configStorage = configStorage;
         this.logging = logging;
         this.pythonScriptHandler = new PythonScriptHandler(configStorage);
         this.proxyForwardHandler = new ProxyForwardHandler();
+        this.jarExtensionHandler = new JarExtensionHandler(api);
         this.activeMockRequests = new ConcurrentHashMap<>();
     }
 
@@ -185,6 +191,7 @@ public class MockHttpHandler implements HttpHandler {
             case STATIC -> generateStaticResponse(config);
             case PYTHON_SCRIPT -> generatePythonScriptResponse(context, config);
             case PROXY_FORWARD -> generateProxyForwardResponse(context, config);
+            case JAR_EXTENSION -> generateJarExtensionResponse(context, config);
             default -> MockResponse.error("Unknown response type");
         };
     }
@@ -234,6 +241,96 @@ public class MockHttpHandler implements HttpHandler {
             logError("Error executing Python script", e);
             return MockResponse.error("Python script execution failed: " + e.getMessage());
         }
+    }
+
+    /**
+     * 生成JAR扩展响应
+     */
+    private MockResponse generateJarExtensionResponse(MockContext context, ResponseConfig config) {
+        try {
+            // 加载JAR（如果尚未加载）
+            if (!jarExtensionHandler.isLoaded() ||
+                !config.getJarPath().equals(jarExtensionHandler.getJarPath())) {
+                boolean loaded = jarExtensionHandler.loadJar(
+                    config.getJarPath(),
+                    config.getHandlerClassName()
+                );
+                if (!loaded) {
+                    return MockResponse.error("Failed to load JAR extension");
+                }
+            }
+
+            // 从context构建HttpRequest
+            HttpRequest request = buildHttpRequestFromContext(context);
+            HttpResponse response = jarExtensionHandler.handleRequest(request);
+
+            // 转换响应
+            MockResponse mockResponse = MockResponse.builder()
+                    .statusCode(response.statusCode())
+                    .headers(new HashMap<>())
+                    .body(response.body() != null ? response.body().getBytes() : new byte[0])
+                    .success(true)
+                    .handlerType("JAR_EXTENSION")
+                    .build();
+
+            // 复制响应头
+            response.headers().forEach(header ->
+                mockResponse.addHeader(header.name(), header.value())
+            );
+
+            return mockResponse;
+        } catch (Exception e) {
+            logError("Error executing JAR extension", e);
+            return MockResponse.error("JAR extension execution failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 从MockContext构建HttpRequest
+     */
+    private HttpRequest buildHttpRequestFromContext(MockContext context) {
+        // 构建请求字符串
+        StringBuilder requestBuilder = new StringBuilder();
+        requestBuilder.append(context.getMethod()).append(" ")
+                      .append(context.getPath() != null ? context.getPath() : "/")
+                      .append(" HTTP/1.1\r\n");
+        
+        // 添加Host头
+        if (context.getHost() != null) {
+            requestBuilder.append("Host: ").append(context.getHost());
+            if (context.getPort() != 80 && context.getPort() != 443) {
+                requestBuilder.append(":").append(context.getPort());
+            }
+            requestBuilder.append("\r\n");
+        }
+        
+        // 添加其他headers
+        if (context.getHeaders() != null) {
+            context.getHeaders().forEach((name, value) -> {
+                if (!name.equalsIgnoreCase("Host")) {
+                    requestBuilder.append(name).append(": ").append(value).append("\r\n");
+                }
+            });
+        }
+        
+        // Content-Length
+        if (context.getBody() != null && context.getBody().length > 0) {
+            requestBuilder.append("Content-Length: ").append(context.getBody().length).append("\r\n");
+        }
+        
+        requestBuilder.append("\r\n");
+        
+        // 合并header和body
+        byte[] headerBytes = requestBuilder.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] bodyBytes = context.getBody() != null ? context.getBody() : new byte[0];
+        byte[] fullRequest = new byte[headerBytes.length + bodyBytes.length];
+        
+        System.arraycopy(headerBytes, 0, fullRequest, 0, headerBytes.length);
+        System.arraycopy(bodyBytes, 0, fullRequest, headerBytes.length, bodyBytes.length);
+        
+        return HttpRequest.httpRequest(
+            burp.api.montoya.core.ByteArray.byteArray(fullRequest)
+        );
     }
 
     /**
