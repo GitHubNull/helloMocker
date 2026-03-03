@@ -69,13 +69,7 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-
-      - name: Run tests
-        run: mvn test
-
-      - name: Get version from pom.xml
+      - name: Get current version from pom.xml
         id: pom_version
         run: |
           POM_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
@@ -96,10 +90,29 @@ jobs:
             echo "Version already matches, no update needed"
           fi
 
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Run tests
+        run: mvn test
+
       - name: Rename JAR for release
         run: |
           VERSION="${{ needs.validate-version.outputs.version }}"
-          mv target/helloMocker-*.jar target/helloMocker-${VERSION}.jar
+          SOURCE_JAR="target/helloMocker-${VERSION}.jar"
+          
+          # 检查JAR文件是否存在
+          if [ -f "$SOURCE_JAR" ]; then
+            echo "JAR already has correct name: $SOURCE_JAR"
+          else
+            # 如果文件名不同，尝试重命名
+            echo "Looking for JAR file to rename..."
+            ACTUAL_JAR=$(ls target/helloMocker-*.jar | head -1)
+            if [ -n "$ACTUAL_JAR" ] && [ "$ACTUAL_JAR" != "$SOURCE_JAR" ]; then
+              mv "$ACTUAL_JAR" "$SOURCE_JAR"
+              echo "Renamed $ACTUAL_JAR to $SOURCE_JAR"
+            fi
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
