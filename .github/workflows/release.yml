@@ -7,6 +7,9 @@ on:
       # 例如: v1.0.0-release, release-v1.2.3, 1.0.0-release 等
       - '*release*'
 
+permissions:
+  contents: write
+
 jobs:
   validate-version:
     name: Validate Version Tag
