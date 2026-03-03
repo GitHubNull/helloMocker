@@ -1,5 +1,6 @@
 package org.oxff.hellomocker.menu;
 
+import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.responses.HttpResponse;
@@ -12,6 +13,7 @@ import org.oxff.hellomocker.model.MatchCondition;
 import org.oxff.hellomocker.model.ResponseConfig;
 import org.oxff.hellomocker.service.MockRuleManager;
 import org.oxff.hellomocker.storage.ConfigStorage;
+import org.oxff.hellomocker.ui.dialog.RuleEditorDialog;
 import org.oxff.hellomocker.util.HttpUtils;
 
 import javax.swing.*;
@@ -32,11 +34,13 @@ import java.util.regex.Pattern;
  */
 public class SendToMockContextMenu implements ContextMenuItemsProvider {
 
+    private final MontoyaApi api;
     private final MockRuleManager ruleManager;
     private final ConfigStorage configStorage;
     private final Logging logging;
 
-    public SendToMockContextMenu(MockRuleManager ruleManager, ConfigStorage configStorage, Logging logging) {
+    public SendToMockContextMenu(MontoyaApi api, MockRuleManager ruleManager, ConfigStorage configStorage, Logging logging) {
+        this.api = api;
         this.ruleManager = ruleManager;
         this.configStorage = configStorage;
         this.logging = logging;
@@ -72,6 +76,7 @@ public class SendToMockContextMenu implements ContextMenuItemsProvider {
 
     /**
      * 处理Send to Mock操作
+     * 根据配置决定是否显示编辑弹窗
      */
     private void handleSendToMock(List<HttpRequestResponse> requestResponses) {
         if (requestResponses.isEmpty()) {
@@ -130,30 +135,78 @@ public class SendToMockContextMenu implements ContextMenuItemsProvider {
                     .responseConfig(responseConfig)
                     .build();
 
-            // 添加到规则管理器
-            if (ruleManager.addRule(rule)) {
-                log("Created Mock rule from Proxy History: " + ruleName);
-                
-                // 显示成功提示
-                SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(
-                            null,
-                            "Mock rule created successfully!\n\n" +
-                            "Name: " + ruleName + "\n" +
-                            "URL: " + url + "\n\n" +
-                            "You can edit this rule in the HelloMocker tab.",
-                            "Send to Mock",
-                            JOptionPane.INFORMATION_MESSAGE
-                    );
-                });
+            // 根据配置决定是否显示编辑弹窗
+            if (configStorage.isShowSendToMockDialog()) {
+                // 显示编辑弹窗
+                showEditDialog(rule, url);
             } else {
-                logError("Failed to create Mock rule: " + ruleName, null);
-                showError("Failed to create Mock rule. Maximum number of rules may have been reached.");
+                // 直接创建规则（原有逻辑）
+                createRuleDirectly(rule, url);
             }
 
         } catch (Exception e) {
             logError("Error creating Mock rule from Proxy History", e);
             showError("Error creating Mock rule: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 显示规则编辑弹窗
+     */
+    private void showEditDialog(MockRule rule, String url) {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // 传 null 作为 existingRule，让对话框走 addRule 分支
+                RuleEditorDialog dialog = new RuleEditorDialog(
+                        null,
+                        api,
+                        ruleManager,
+                        null
+                );
+                // 预填充从 Proxy History 提取的数据
+                dialog.preFillRuleData(rule);
+                dialog.setVisible(true);
+
+                if (dialog.isSaved()) {
+                    log("Created Mock rule from dialog");
+                    JOptionPane.showMessageDialog(
+                            null,
+                            "Mock rule created successfully!\n\n" +
+                            "URL: " + url,
+                            "Send to Mock",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                }
+            } catch (Exception e) {
+                logError("Error showing edit dialog", e);
+                showError("Failed to open edit dialog: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 直接创建规则（不显示弹窗）
+     */
+    private void createRuleDirectly(MockRule rule, String url) {
+        // 添加到规则管理器
+        if (ruleManager.addRule(rule)) {
+            log("Created Mock rule from Proxy History: " + rule.getName());
+            
+            // 显示成功提示
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(
+                        null,
+                        "Mock rule created successfully!\n\n" +
+                        "Name: " + rule.getName() + "\n" +
+                        "URL: " + url + "\n\n" +
+                        "You can edit this rule in the HelloMocker tab.",
+                        "Send to Mock",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            });
+        } else {
+            logError("Failed to create Mock rule: " + rule.getName(), null);
+            showError("Failed to create Mock rule. Maximum number of rules may have been reached.");
         }
     }
 
@@ -229,18 +282,22 @@ public class SendToMockContextMenu implements ContextMenuItemsProvider {
 
     /**
      * 生成规则名称
+     * 优化：移除查询参数，如果路径过长保留最后部分
      */
     private String generateRuleName(String method, String path) {
-        // 简化路径
-        String simplifiedPath = path;
-        if (path.length() > 30) {
-            simplifiedPath = path.substring(0, 27) + "...";
+        // 移除查询参数
+        String cleanPath = path.split("\\?")[0];
+        
+        // 如果路径过长，保留最后30个字符（通常更有标识性）
+        if (cleanPath.length() > 30) {
+            int startIndex = Math.max(0, cleanPath.length() - 27);
+            cleanPath = "..." + cleanPath.substring(startIndex);
         }
         
         // 移除特殊字符
-        simplifiedPath = simplifiedPath.replaceAll("[^a-zA-Z0-9/_-]", "_");
+        cleanPath = cleanPath.replaceAll("[^a-zA-Z0-9/_-]", "_");
         
-        return method + " " + simplifiedPath + " (Auto)";
+        return method + " " + cleanPath + " (Auto)";
     }
 
     /**

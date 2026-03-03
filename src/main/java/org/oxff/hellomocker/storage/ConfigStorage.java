@@ -21,6 +21,7 @@ public class ConfigStorage {
     private static final String DEFAULT_TIMEOUT_KEY = CONFIG_PREFIX + "defaultTimeout";
     private static final String MAX_RULES_KEY = CONFIG_PREFIX + "maxRules";
     private static final String ENABLE_LOGGING_KEY = CONFIG_PREFIX + "enableLogging";
+    private static final String SHOW_SEND_TO_MOCK_DIALOG_KEY = CONFIG_PREFIX + "showSendToMockDialog";
 
     private final MontoyaApi api;
     private final Persistence persistence;
@@ -30,6 +31,7 @@ public class ConfigStorage {
     private int defaultTimeout;
     private int maxRules;
     private boolean enableLogging;
+    private boolean showSendToMockDialog;
 
     public ConfigStorage(MontoyaApi api) {
         this.api = api;
@@ -40,6 +42,7 @@ public class ConfigStorage {
         this.defaultTimeout = 30000; // 30秒
         this.maxRules = 1000;
         this.enableLogging = true;
+        this.showSendToMockDialog = true; // 默认显示弹窗
     }
 
     /**
@@ -75,6 +78,11 @@ public class ConfigStorage {
                 this.enableLogging = Boolean.parseBoolean(savedLogging);
             }
 
+            String savedShowDialog = persistence.extensionData().getString(SHOW_SEND_TO_MOCK_DIALOG_KEY);
+            if (savedShowDialog != null && !savedShowDialog.isEmpty()) {
+                this.showSendToMockDialog = Boolean.parseBoolean(savedShowDialog);
+            }
+
             log("Configuration loaded successfully");
         } catch (Exception e) {
             logError("Failed to load configuration", e);
@@ -90,6 +98,7 @@ public class ConfigStorage {
             persistence.extensionData().setString(DEFAULT_TIMEOUT_KEY, String.valueOf(defaultTimeout));
             persistence.extensionData().setString(MAX_RULES_KEY, String.valueOf(maxRules));
             persistence.extensionData().setString(ENABLE_LOGGING_KEY, String.valueOf(enableLogging));
+            persistence.extensionData().setString(SHOW_SEND_TO_MOCK_DIALOG_KEY, String.valueOf(showSendToMockDialog));
 
             log("Configuration saved successfully");
         } catch (Exception e) {
@@ -137,6 +146,17 @@ public class ConfigStorage {
     public void setPythonPath(String pythonPath) {
         this.pythonPath = pythonPath;
         saveConfig();
+    }
+
+    /**
+     * 是否显示Send to Mock弹窗
+     */
+    public boolean isShowSendToMockDialog() {
+        return showSendToMockDialog;
+    }
+
+    public void setShowSendToMockDialog(boolean showSendToMockDialog) {
+        this.showSendToMockDialog = showSendToMockDialog;
     }
 
     /**

@@ -55,7 +55,7 @@ public class HelloMockerExtension implements BurpExtension {
             logging.logToOutput("HTTP handler registered successfully");
 
             // 注册右键菜单
-            SendToMockContextMenu contextMenu = new SendToMockContextMenu(ruleManager, configStorage, logging);
+            SendToMockContextMenu contextMenu = new SendToMockContextMenu(api, ruleManager, configStorage, logging);
             api.userInterface().registerContextMenuItemsProvider(contextMenu);
             logging.logToOutput("Context menu registered successfully");
 

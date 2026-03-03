@@ -25,6 +25,7 @@ public class ConfigPanel extends JPanel {
     private JSpinner timeoutSpinner;
     private JSpinner maxRulesSpinner;
     private JCheckBox enableLoggingCheckBox;
+    private JCheckBox showSendToMockDialogCheckBox;
     private JLabel pythonStatusLabel;
 
     public ConfigPanel(MontoyaApi api, ConfigStorage configStorage) {
@@ -107,6 +108,16 @@ public class ConfigPanel extends JPanel {
         enableLoggingCheckBox = new JCheckBox();
         formPanel.add(enableLoggingCheckBox, gbc);
 
+        // 显示Send to Mock弹窗
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        formPanel.add(new JLabel("Show Send to Mock Dialog:"), gbc);
+
+        gbc.gridx = 1;
+        showSendToMockDialogCheckBox = new JCheckBox();
+        showSendToMockDialogCheckBox.setToolTipText("Show edit dialog when sending requests to Mock (default: enabled)");
+        formPanel.add(showSendToMockDialogCheckBox, gbc);
+
         // 填充空白
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -150,6 +161,7 @@ public class ConfigPanel extends JPanel {
         timeoutSpinner.setValue(configStorage.getDefaultTimeout());
         maxRulesSpinner.setValue(configStorage.getMaxRules());
         enableLoggingCheckBox.setSelected(configStorage.isEnableLogging());
+        showSendToMockDialogCheckBox.setSelected(configStorage.isShowSendToMockDialog());
 
         // 更新Python状态
         updatePythonStatus();
@@ -163,6 +175,7 @@ public class ConfigPanel extends JPanel {
         int timeout = (Integer) timeoutSpinner.getValue();
         int maxRules = (Integer) maxRulesSpinner.getValue();
         boolean enableLogging = enableLoggingCheckBox.isSelected();
+        boolean showSendToMockDialog = showSendToMockDialogCheckBox.isSelected();
 
         // 验证
         if (pythonPath.isEmpty()) {
@@ -178,6 +191,7 @@ public class ConfigPanel extends JPanel {
         configStorage.setDefaultTimeout(timeout);
         configStorage.setMaxRules(maxRules);
         configStorage.setEnableLogging(enableLogging);
+        configStorage.setShowSendToMockDialog(showSendToMockDialog);
         configStorage.saveConfig();
 
         JOptionPane.showMessageDialog(this,

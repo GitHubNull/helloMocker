@@ -166,6 +166,28 @@ public class RuleEditorDialog extends JDialog {
         }
     }
 
+    /**
+     * 预填充规则数据（用于从右键菜单创建时）
+     * 此方法在 existingRule 为 null 时调用，用于预填充表单数据
+     * 注意：调用此方法后规则仍会被当作新规则处理（走 addRule 分支）
+     */
+    public void preFillRuleData(MockRule rule) {
+        if (rule != null) {
+            nameField.setText(rule.getName());
+            descriptionArea.setText(rule.getDescription());
+            prioritySpinner.setValue(rule.getPriority());
+            enabledCheckBox.setSelected(rule.isEnabled());
+
+            if (rule.getMatchCondition() != null) {
+                matchConditionPanel.setMatchCondition(rule.getMatchCondition());
+            }
+
+            if (rule.getResponseConfig() != null) {
+                responseConfigPanel.setResponseConfig(rule.getResponseConfig());
+            }
+        }
+    }
+
     private void saveRule(ActionEvent e) {
         // 验证输入
         String name = nameField.getText().trim();
