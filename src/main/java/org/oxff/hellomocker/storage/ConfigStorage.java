@@ -5,9 +5,6 @@ import burp.api.montoya.persistence.Persistence;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * 配置存储
  * 管理插件的全局配置

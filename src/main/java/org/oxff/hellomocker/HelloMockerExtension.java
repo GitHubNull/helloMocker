@@ -10,8 +10,6 @@ import org.oxff.hellomocker.service.MockRuleManager;
 import org.oxff.hellomocker.storage.ConfigStorage;
 import org.oxff.hellomocker.ui.MainTabPanel;
 
-import javax.swing.*;
-
 /**
  * HelloMocker BurpSuite扩展主入口
  *

@@ -4,13 +4,11 @@ import burp.api.montoya.MontoyaApi;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oxff.hellomocker.model.MockRule;
-import org.oxff.hellomocker.model.ResponseConfig;
 import org.oxff.hellomocker.util.JsonUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;

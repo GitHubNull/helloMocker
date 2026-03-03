@@ -17,6 +17,7 @@ import java.io.File;
  */
 public class ConfigPanel extends JPanel {
 
+    @SuppressWarnings("unused")
     private final MontoyaApi api;
     private final ConfigStorage configStorage;
 

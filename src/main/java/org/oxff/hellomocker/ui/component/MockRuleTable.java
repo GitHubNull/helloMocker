@@ -18,6 +18,7 @@ import java.awt.event.MouseEvent;
  */
 public class MockRuleTable extends JTable {
 
+    @SuppressWarnings("unused")
     private final MontoyaApi api;
     private final MockRuleManager ruleManager;
     private JPopupMenu popupMenu;

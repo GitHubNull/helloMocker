@@ -1,7 +1,5 @@
 package org.oxff.hellomocker.api;
 
-import java.util.Map;
-
 /**
  * Mock处理器接口
  * 供用户扩展JAR包时实现

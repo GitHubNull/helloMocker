@@ -1,7 +1,6 @@
 package org.oxff.hellomocker.http;
 
 import burp.api.montoya.core.Annotations;
-import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.handler.*;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
