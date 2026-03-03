@@ -6,7 +6,6 @@ import org.oxff.hellomocker.service.MockRuleManager;
 import org.oxff.hellomocker.storage.ConfigStorage;
 import org.oxff.hellomocker.ui.component.MockRuleTable;
 import org.oxff.hellomocker.ui.dialog.RuleEditorDialog;
-import org.oxff.hellomocker.ui.util.FlatLafPanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -25,7 +24,7 @@ import java.util.List;
  * @author oxff
  * @version 1.0
  */
-public class RuleListPanel extends FlatLafPanel implements MockRuleManager.RuleChangeListener {
+public class RuleListPanel extends JPanel implements MockRuleManager.RuleChangeListener {
 
     private final MontoyaApi api;
     private final MockRuleManager ruleManager;

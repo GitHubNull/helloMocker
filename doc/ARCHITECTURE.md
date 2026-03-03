@@ -275,9 +275,9 @@ helloMocker/
 - **优化**: 使用进程池或长连接机制，避免频繁启动开销
 
 ### 6.2 UI框架
-- **方案**: Swing + FlatLaf
-- **原因**: FlatLaf提供现代化的外观，同时兼容BurpSuite的Swing环境
-- **依赖**: `com.formdev:flatlaf:3.x`
+- **方案**: Swing (BurpSuite原生外观)
+- **原因**: 使用BurpSuite自带的外观和主题，确保插件与BurpSuite界面风格一致
+- **实现**: 所有UI组件继承标准JPanel，使用BurpSuite提供的主题和样式
 
 ### 6.3 代码编辑器
 - **方案**: RSyntaxTextArea

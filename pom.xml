@@ -19,7 +19,6 @@
         
         <!-- Dependency Versions -->
         <montoya.api.version>2023.10.2</montoya.api.version>
-        <flatlaf.version>3.2.5</flatlaf.version>
         <rsyntaxtextarea.version>3.3.4</rsyntaxtextarea.version>
         <jackson.version>2.15.2</jackson.version>
         <lombok.version>1.18.30</lombok.version>
@@ -34,13 +33,6 @@
             <artifactId>montoya-api</artifactId>
             <version>${montoya.api.version}</version>
             <scope>provided</scope>
-        </dependency>
-
-        <!-- FlatLaf - Modern Look and Feel -->
-        <dependency>
-            <groupId>com.formdev</groupId>
-            <artifactId>flatlaf</artifactId>
-            <version>${flatlaf.version}</version>
         </dependency>
 
         <!-- RSyntaxTextArea - Code Editor with Syntax Highlighting -->

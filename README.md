@@ -17,7 +17,6 @@ HelloMocker 是一款功能强大的 BurpSuite HTTP Mock 插件，支持通过 P
 - 📂 **Python 脚本支持**：从文件导入 Python 脚本，支持查看脚本内容
 - 🖱️ **右键快捷操作**：在 Proxy History 中右键快速创建 Mock 规则
 - 💾 **配置持久化**：规则以 JSON 格式保存，支持导入导出
-- 🎨 **现代化界面**：采用 FlatLaf 界面风格
 
 ## 📸 界面预览
 
@@ -165,7 +164,7 @@ def handle_request(request):
 
 - **语言**：Java 17
 - **框架**：BurpSuite Montoya API
-- **UI**：Swing + FlatLaf
+- **UI**：Swing（BurpSuite 原生外观）
 - **依赖**：
   - Jackson（JSON 处理）
   - RSyntaxTextArea（代码预览）
@@ -210,7 +209,6 @@ helloMocker/
 
 - [BurpSuite](https://portswigger.net/burp) - 优秀的 Web 安全测试工具
 - [RSyntaxTextArea](https://github.com/bobbylight/RSyntaxTextArea) - 代码编辑器组件
-- [FlatLaf](https://www.formdev.com/flatlaf/) - 现代化 Swing 外观
 
 ## 📧 联系我们
 

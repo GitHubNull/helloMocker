@@ -718,14 +718,14 @@ public class ResponseConfigPanel extends JPanel {
     }
     
     /**
-     * 修复RSyntaxTextArea在FlatLaf/BurpSuite主题下无法输入的问题
-     * 
-     * 问题原因：BurpSuite使用FlatLaf主题，当applyThemeToComponent被调用后，
-     * 会覆盖RSyntaxTextArea的InputMap，导致键盘输入事件无法正确传递到编辑器。
-     * 
+     * 修复RSyntaxTextArea在BurpSuite环境中无法输入的问题
+     *
+     * 问题原因：BurpSuite的主题管理可能会覆盖RSyntaxTextArea的InputMap，
+     * 导致键盘输入事件无法正确传递到编辑器。
+     *
      * 解决方案：使用KeyEventPostProcessor在事件处理完成后检查，
      * 如果字符没有被插入，则手动插入。
-     * 
+     *
      * @param textArea 需要修复的RSyntaxTextArea组件
      */
     private void fixEditorInputMap(org.fife.ui.rsyntaxtextarea.RSyntaxTextArea textArea) {

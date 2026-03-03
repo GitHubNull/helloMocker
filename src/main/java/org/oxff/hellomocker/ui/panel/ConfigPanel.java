@@ -2,7 +2,6 @@ package org.oxff.hellomocker.ui.panel;
 
 import burp.api.montoya.MontoyaApi;
 import org.oxff.hellomocker.storage.ConfigStorage;
-import org.oxff.hellomocker.ui.util.FlatLafPanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -16,7 +15,7 @@ import java.io.File;
  * @author oxff
  * @version 1.0
  */
-public class ConfigPanel extends FlatLafPanel {
+public class ConfigPanel extends JPanel {
 
     private final MontoyaApi api;
     private final ConfigStorage configStorage;

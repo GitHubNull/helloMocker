@@ -5,7 +5,6 @@ import org.oxff.hellomocker.service.MockRuleManager;
 import org.oxff.hellomocker.storage.ConfigStorage;
 import org.oxff.hellomocker.ui.panel.ConfigPanel;
 import org.oxff.hellomocker.ui.panel.RuleListPanel;
-import org.oxff.hellomocker.ui.util.FlatLafPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,7 +16,7 @@ import java.awt.*;
  * @author oxff
  * @version 1.0
  */
-public class MainTabPanel extends FlatLafPanel {
+public class MainTabPanel extends JPanel {
 
     private final MontoyaApi api;
     private final MockRuleManager ruleManager;

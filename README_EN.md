@@ -17,7 +17,6 @@ HelloMocker is a powerful BurpSuite HTTP Mock extension that supports dynamic re
 - 📂 **Python Script Support**: Import Python scripts from files with preview functionality
 - 🖱️ **Right-Click Quick Action**: Quickly create Mock rules from Proxy History
 - 💾 **Configuration Persistence**: Rules saved in JSON format with import/export support
-- 🎨 **Modern UI**: Adopts FlatLaf interface style
 
 ## 📸 Interface Preview
 
@@ -165,7 +164,7 @@ The following options can be configured in the `Settings` tab:
 
 - **Language**: Java 17
 - **Framework**: BurpSuite Montoya API
-- **UI**: Swing + FlatLaf
+- **UI**: Swing (BurpSuite Native Look and Feel)
 - **Dependencies**:
   - Jackson (JSON processing)
   - RSyntaxTextArea (Code preview)
@@ -210,7 +209,6 @@ This project is licensed under the [MIT](LICENSE) License.
 
 - [BurpSuite](https://portswigger.net/burp) - Excellent web security testing tool
 - [RSyntaxTextArea](https://github.com/bobbylight/RSyntaxTextArea) - Code editor component
-- [FlatLaf](https://www.formdev.com/flatlaf/) - Modern Swing look and feel
 
 ## 📧 Contact
 

@@ -1,7 +1,6 @@
 package org.oxff.hellomocker.ui.component;
 
 import org.oxff.hellomocker.model.MatchCondition;
-import org.oxff.hellomocker.ui.util.FlatLafPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,7 +12,7 @@ import java.awt.*;
  * @author oxff
  * @version 1.0
  */
-public class MatchConditionPanel extends FlatLafPanel {
+public class MatchConditionPanel extends JPanel {
 
     private JComboBox<String> matchTypeCombo;
     private JTextField urlPatternField;
