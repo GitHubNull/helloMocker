@@ -69,6 +69,40 @@ if __name__ == "__main__":
     }
 
     /**
+     * 执行Python脚本（内联代码）
+     *
+     * @param context      请求上下文
+     * @param pythonScript Python脚本代码
+     * @return Mock响应
+     */
+    public MockResponse execute(MockContext context, String pythonScript) {
+        if (pythonScript == null || pythonScript.trim().isEmpty()) {
+            return MockResponse.error("Python script is empty");
+        }
+
+        // 验证Python路径
+        String pythonPath = configStorage.getPythonPath();
+        if (!configStorage.isPythonPathValid()) {
+            return MockResponse.error("Python path is not valid: " + pythonPath);
+        }
+
+        try {
+            // 准备请求数据
+            Map<String, Object> requestData = convertContextToMap(context);
+            String requestJson = objectMapper.writeValueAsString(requestData);
+
+            // 包装脚本
+            String wrappedScript = String.format(PYTHON_WRAPPER_TEMPLATE, pythonScript);
+
+            // 执行脚本
+            return executePythonScript(pythonPath, wrappedScript, requestJson);
+
+        } catch (Exception e) {
+            return MockResponse.error("Failed to execute Python script: " + e.getMessage());
+        }
+    }
+
+    /**
      * 从文件执行Python脚本
      *
      * @param context      请求上下文

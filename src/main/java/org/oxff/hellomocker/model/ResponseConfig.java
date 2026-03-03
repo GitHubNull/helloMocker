@@ -33,7 +33,12 @@ public class ResponseConfig implements Serializable {
     // ============ Python脚本模式配置 ============
 
     /**
-     * Python脚本文件路径（必须）
+     * Python脚本代码（在线编写）
+     */
+    private String pythonScript;
+
+    /**
+     * Python脚本文件路径（导入的文件，可选）
      */
     private String pythonFilePath;
 
@@ -115,7 +120,8 @@ public class ResponseConfig implements Serializable {
      * 检查Python脚本配置是否有效
      */
     private boolean isPythonScriptValid() {
-        return pythonFilePath != null && !pythonFilePath.trim().isEmpty();
+        return (pythonScript != null && !pythonScript.trim().isEmpty())
+                || (pythonFilePath != null && !pythonFilePath.trim().isEmpty());
     }
 
     /**

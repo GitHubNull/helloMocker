@@ -2,6 +2,7 @@ package org.oxff.hellomocker.ui.component;
 
 import burp.api.montoya.MontoyaApi;
 import org.oxff.hellomocker.model.ResponseConfig;
+import org.oxff.hellomocker.util.ResourceLoader;
 
 import javax.swing.*;
 import java.awt.*;
@@ -30,8 +31,9 @@ public class ResponseConfigPanel extends JPanel {
     private JTextArea bodyArea;
 
     // Python脚本面板组件
-    private JTextArea pythonEditor;
+    private org.fife.ui.rsyntaxtextarea.RSyntaxTextArea pythonEditor;
     private JTextField pythonFileField;
+    private JPanel previewPanel;  // 代码预览面板容器
 
     // 代理转发面板组件
     private JTextField targetHostField;
@@ -108,85 +110,168 @@ public class ResponseConfigPanel extends JPanel {
     private JPanel createPythonScriptPanel() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
 
-        // 文件导入
+        // 顶部面板：模式选择和文件导入
+        JPanel topPanel = new JPanel(new BorderLayout(5, 5));
+        
+        // 模式选择
+        JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        modePanel.add(new JLabel("Script Mode:"));
+        String[] modes = {"Online Editor", "Import File"};
+        JComboBox<String> modeCombo = new JComboBox<>(modes);
+        modeCombo.addActionListener(e -> togglePythonMode(modeCombo.getSelectedIndex()));
+        modePanel.add(modeCombo);
+        topPanel.add(modePanel, BorderLayout.NORTH);
+        
+        // 文件导入面板（默认隐藏）
         JPanel filePanel = new JPanel(new BorderLayout(5, 5));
-        filePanel.add(new JLabel("Script File:*"), BorderLayout.WEST);
+        filePanel.add(new JLabel("Script File:"), BorderLayout.WEST);
         pythonFileField = new JTextField();
         filePanel.add(pythonFileField, BorderLayout.CENTER);
         
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        // 按钮面板（Browse + Export Template）
+        JPanel fileButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         JButton browseButton = new JButton("Browse...");
         browseButton.addActionListener(e -> browsePythonFile());
-        buttonPanel.add(browseButton);
+        fileButtonPanel.add(browseButton);
         
-        JButton viewButton = new JButton("View");
-        viewButton.addActionListener(e -> viewPythonFile());
-        buttonPanel.add(viewButton);
+        JButton exportTemplateButton = new JButton("Export Template");
+        exportTemplateButton.setToolTipText("Export the built-in Python script template to a file");
+        exportTemplateButton.addActionListener(e -> exportPythonTemplate());
+        fileButtonPanel.add(exportTemplateButton);
         
-        filePanel.add(buttonPanel, BorderLayout.EAST);
-        panel.add(filePanel, BorderLayout.NORTH);
+        filePanel.add(fileButtonPanel, BorderLayout.EAST);
+        filePanel.setVisible(false);  // 默认隐藏
+        topPanel.add(filePanel, BorderLayout.CENTER);
+        
+        panel.add(topPanel, BorderLayout.NORTH);
 
-        // 代码预览区域
-        JPanel previewPanel = new JPanel(new BorderLayout());
-        previewPanel.setBorder(BorderFactory.createTitledBorder("Script Preview (Read Only)"));
+        // 代码编辑器区域（RSyntaxTextArea）
+        JPanel editorPanel = new JPanel(new BorderLayout());
+        editorPanel.setBorder(BorderFactory.createTitledBorder("Python Script"));
         
-        pythonEditor = new JTextArea(15, 60);
-        pythonEditor.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        pythonEditor.setEditable(false);
-        pythonEditor.setLineWrap(false);
+        // 使用自定义子类来修复BurpSuite主题导致的输入问题
+        pythonEditor = new org.fife.ui.rsyntaxtextarea.RSyntaxTextArea(20, 60) {
+            @Override
+            public void addNotify() {
+                super.addNotify();
+                // 组件被添加到容器后，延迟修复InputMap
+                // 这是因为BurpSuite的主题会在组件添加后才应用
+                org.fife.ui.rsyntaxtextarea.RSyntaxTextArea editor = this;
+                SwingUtilities.invokeLater(() -> {
+                    ResponseConfigPanel.this.fixEditorInputMap(editor);
+                });
+            }
+        };
+        pythonEditor.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_PYTHON);
+        pythonEditor.setCodeFoldingEnabled(true);
         
-        JScrollPane scrollPane = new JScrollPane(pythonEditor);
-        previewPanel.add(scrollPane, BorderLayout.CENTER);
+        // 关键修复：添加KeyListener直接处理键盘输入
+        // 这是最可靠的方式，绕过InputMap的问题
+        pythonEditor.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyTyped(java.awt.event.KeyEvent e) {
+                // KeyTyped事件表示字符输入，让默认处理继续
+                // 如果默认处理被阻止，这里手动插入字符
+                if (e.isConsumed()) {
+                    char c = e.getKeyChar();
+                    if (c != java.awt.event.KeyEvent.CHAR_UNDEFINED && !Character.isISOControl(c)) {
+                        try {
+                            int pos = pythonEditor.getCaretPosition();
+                            pythonEditor.getDocument().insertString(pos, String.valueOf(c), null);
+                        } catch (Exception ex) {
+                            // 忽略
+                        }
+                    }
+                }
+            }
+        });
         
-        panel.add(previewPanel, BorderLayout.CENTER);
+        // 从资源文件加载默认代码模板
+        String pythonTemplate = ResourceLoader.loadPythonScriptTemplate();
+        pythonEditor.setText(pythonTemplate);
 
-        // 帮助文本
-        JTextArea helpText = new JTextArea(
-            "Python Script Help:\n" +
-            "- Create a .py file with handle_request(request) function\n" +
-            "- Click 'Browse...' to select your Python script file\n" +
-            "- Click 'View' to preview the script content\n" +
-            "- Request dict contains: url, method, headers, body, path, query, host, port, protocol\n" +
-            "- Return a dict with: status (int), headers (dict), body (str)\n" +
-            "- Use 'body_base64' instead of 'body' for binary data"
-        );
-        helpText.setEditable(false);
-        helpText.setBackground(panel.getBackground());
-        helpText.setLineWrap(true);
-        helpText.setWrapStyleWord(true);
-        panel.add(helpText, BorderLayout.SOUTH);
+        org.fife.ui.rtextarea.RTextScrollPane scrollPane = new org.fife.ui.rtextarea.RTextScrollPane(pythonEditor);
+        editorPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        panel.add(editorPanel, BorderLayout.CENTER);
+
+        // 可折叠的帮助面板
+        JPanel helpPanel = createCollapsibleHelpPanel();
+        panel.add(helpPanel, BorderLayout.SOUTH);
+        
+        // 保存引用以便切换
+        this.previewPanel = filePanel;
 
         return panel;
     }
     
-    private void viewPythonFile() {
-        String filePath = pythonFileField.getText().trim();
-        if (filePath.isEmpty()) {
-            JOptionPane.showMessageDialog(this, 
-                "Please select a Python script file first.", 
-                "No File Selected", 
-                JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+    private JPanel createCollapsibleHelpPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
         
-        File file = new File(filePath);
-        if (!file.exists()) {
-            JOptionPane.showMessageDialog(this, 
-                "File not found: " + filePath, 
-                "File Not Found", 
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        // 帮助按钮
+        JButton helpButton = new JButton("Show Help ▼");
+        helpButton.setFocusPainted(false);
+        panel.add(helpButton, BorderLayout.NORTH);
         
-        try {
-            String content = new String(java.nio.file.Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-            pythonEditor.setText(content);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, 
-                "Error reading file: " + e.getMessage(), 
-                "Error", 
-                JOptionPane.ERROR_MESSAGE);
+        // 帮助内容面板（默认隐藏）
+        JPanel helpContentPanel = new JPanel(new BorderLayout());
+        helpContentPanel.setVisible(false);
+        
+        // 从资源文件加载帮助文本
+        String helpContent = ResourceLoader.loadPythonHelpText();
+        JTextArea helpText = new JTextArea(helpContent, 10, 50);
+        helpText.setEditable(false);
+        helpText.setBackground(panel.getBackground());
+        helpText.setLineWrap(true);
+        helpText.setWrapStyleWord(true);
+        helpText.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        
+        // 添加滚动条
+        JScrollPane scrollPane = new JScrollPane(helpText);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        
+        helpContentPanel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(helpContentPanel, BorderLayout.CENTER);
+        
+        // 点击按钮切换显示/隐藏
+        helpButton.addActionListener(e -> {
+            boolean isVisible = helpContentPanel.isVisible();
+            helpContentPanel.setVisible(!isVisible);
+            helpButton.setText(isVisible ? "Show Help ▼" : "Hide Help ▲");
+            panel.revalidate();
+            panel.repaint();
+        });
+        
+        return panel;
+    }
+
+    private void togglePythonMode(int mode) {
+        if (mode == 0) {
+            // Online Editor mode
+            previewPanel.setVisible(false);
+            pythonEditor.setEditable(true);
+        } else {
+            // Import File mode
+            previewPanel.setVisible(true);
+            // 如果选择了文件，读取内容到编辑器（只读显示）
+            String filePath = pythonFileField.getText().trim();
+            if (!filePath.isEmpty()) {
+                File file = new File(filePath);
+                if (file.exists()) {
+                    try {
+                        String content = new String(java.nio.file.Files.readAllBytes(file.toPath()), 
+                            java.nio.charset.StandardCharsets.UTF_8);
+                        pythonEditor.setText(content);
+                    } catch (Exception e) {
+                        // 忽略读取错误
+                    }
+                }
+            }
         }
+        revalidate();
+        repaint();
     }
 
     private JPanel createProxyForwardPanel() {
@@ -273,7 +358,113 @@ public class ResponseConfigPanel extends JPanel {
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
-            pythonFileField.setText(selectedFile.getAbsolutePath());
+            String filePath = selectedFile.getAbsolutePath();
+            
+            // 验证Python语法
+            if (validatePythonSyntax(filePath)) {
+                pythonFileField.setText(filePath);
+            }
+        }
+    }
+    
+    /**
+     * 导出Python脚本模板
+     */
+    private void exportPythonTemplate() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Export Python Script Template");
+        fileChooser.setSelectedFile(new File("helloMocker_template.py"));
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                "Python Files", "py"));
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            
+            // 检查文件是否存在，提示是否覆盖
+            if (selectedFile.exists()) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "File already exists. Overwrite?",
+                        "Confirm Overwrite",
+                        JOptionPane.YES_NO_OPTION);
+                if (confirm != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
+            
+            try {
+                // 从资源文件读取模板
+                String template = ResourceLoader.loadPythonScriptTemplate();
+                java.nio.file.Files.write(selectedFile.toPath(), 
+                        template.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                
+                JOptionPane.showMessageDialog(this,
+                        "Template exported successfully to:\n" + selectedFile.getAbsolutePath(),
+                        "Export Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to export template: " + e.getMessage(),
+                        "Export Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    /**
+     * 验证Python脚本语法
+     * 
+     * @param filePath Python文件路径
+     * @return 语法是否正确
+     */
+    private boolean validatePythonSyntax(String filePath) {
+        if (filePath == null || filePath.trim().isEmpty()) {
+            return false;
+        }
+        
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return false;
+        }
+        
+        String pythonPath = api.persistence().extensionData().getString("hellomocker.config.pythonPath");
+        if (pythonPath == null || pythonPath.trim().isEmpty()) {
+            pythonPath = "python3"; // 默认使用python3
+        }
+        
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                    pythonPath,
+                    "-m", "py_compile",
+                    filePath
+            );
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            // 读取错误输出
+            StringBuilder errors = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    errors.append(line).append("\n");
+                }
+            }
+            
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                // 语法错误
+                JOptionPane.showMessageDialog(this,
+                        "Python syntax error in file:\n" + filePath + "\n\n" + errors.toString(),
+                        "Syntax Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return false;
+            }
+            return true;
+        } catch (Exception e) {
+            // 验证失败（可能是Python路径问题），但不阻止导入，只记录日志
+            System.err.println("Python syntax validation failed: " + e.getMessage());
+            return true; // 允许导入，即使验证失败
         }
     }
 
@@ -294,6 +485,14 @@ public class ResponseConfigPanel extends JPanel {
                 builder.body(bodyArea.getText());
             }
             case PYTHON_SCRIPT -> {
+                // 如果是在线编辑器模式，保存代码内容
+                if (pythonEditor != null) {
+                    String script = pythonEditor.getText();
+                    if (script != null && !script.trim().isEmpty()) {
+                        builder.pythonScript(script);
+                    }
+                }
+                // 如果选择了文件，也保存文件路径
                 String filePath = pythonFileField.getText().trim();
                 if (!filePath.isEmpty()) {
                     builder.pythonFilePath(filePath);
@@ -376,11 +575,14 @@ public class ResponseConfigPanel extends JPanel {
                 }
             }
             case PYTHON_SCRIPT -> {
+                // 恢复Python脚本代码（优先）
+                if (config.getPythonScript() != null && !config.getPythonScript().trim().isEmpty()) {
+                    pythonEditor.setText(config.getPythonScript());
+                }
+                // 恢复文件路径
                 if (config.getPythonFilePath() != null) {
                     pythonFileField.setText(config.getPythonFilePath());
                 }
-                // 清空预览区域
-                pythonEditor.setText("");
             }
             case PROXY_FORWARD -> {
                 if (config.getTargetHost() != null) {
@@ -390,5 +592,92 @@ public class ResponseConfigPanel extends JPanel {
                 useSslCheckBox.setSelected(config.isUseSsl());
             }
         }
+    }
+    
+    /**
+     * 修复RSyntaxTextArea在FlatLaf/BurpSuite主题下无法输入的问题
+     * 
+     * 问题原因：BurpSuite使用FlatLaf主题，当applyThemeToComponent被调用后，
+     * 会覆盖RSyntaxTextArea的InputMap，导致键盘输入事件无法正确传递到编辑器。
+     * 
+     * 解决方案：使用KeyEventPostProcessor在事件处理完成后检查，
+     * 如果字符没有被插入，则手动插入。
+     * 
+     * @param textArea 需要修复的RSyntaxTextArea组件
+     */
+    private void fixEditorInputMap(org.fife.ui.rsyntaxtextarea.RSyntaxTextArea textArea) {
+        // 确保编辑器可编辑
+        textArea.setEditable(true);
+        textArea.setEnabled(true);
+        textArea.setFocusable(true);
+        
+        // 启用输入法支持
+        textArea.enableInputMethods(true);
+        
+        // 设置焦点遍历键，确保Tab键不会被拦截（如果需要Tab缩进）
+        textArea.setFocusTraversalKeysEnabled(false);
+        
+        // 关键修复：注册KeyEventPostProcessor在事件处理后进行补救
+        // PostProcessor在事件被所有组件处理后调用
+        java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager()
+            .addKeyEventPostProcessor(new java.awt.KeyEventPostProcessor() {
+                @Override
+                public boolean postProcessKeyEvent(java.awt.event.KeyEvent e) {
+                    // 只处理目标编辑器获得焦点时的KEY_TYPED事件
+                    if (e.getComponent() == textArea && textArea.hasFocus()
+                        && e.getID() == java.awt.event.KeyEvent.KEY_TYPED
+                        && textArea.isEditable()) {
+                        
+                        // 如果事件没有被消费，说明InputMap没有正确处理
+                        if (!e.isConsumed()) {
+                            char c = e.getKeyChar();
+                            // 检查是否是可输入字符（非控制键）
+                            if (c != java.awt.event.KeyEvent.CHAR_UNDEFINED 
+                                && !e.isControlDown() && !e.isAltDown() && !e.isMetaDown()) {
+                                
+                                try {
+                                    // 处理回车
+                                    if (c == '\n' || c == '\r') {
+                                        textArea.replaceSelection("\n");
+                                        e.consume();
+                                    } 
+                                    // 处理Tab
+                                    else if (c == '\t') {
+                                        textArea.replaceSelection("\t");
+                                        e.consume();
+                                    }
+                                    // 处理退格键
+                                    else if (c == '\b') {
+                                        int pos = textArea.getCaretPosition();
+                                        if (pos > 0 && textArea.getSelectedText() == null) {
+                                            textArea.getDocument().remove(pos - 1, 1);
+                                        } else if (textArea.getSelectedText() != null) {
+                                            textArea.replaceSelection("");
+                                        }
+                                        e.consume();
+                                    }
+                                    // 处理普通可打印字符
+                                    else if (c >= ' ' && c != '\u007F') {
+                                        textArea.replaceSelection(String.valueOf(c));
+                                        e.consume();
+                                    }
+                                } catch (Exception ex) {
+                                    // 忽略异常
+                                }
+                            }
+                        }
+                    }
+                    return false; // 让事件继续传递
+                }
+            });
+    }
+    
+    /**
+     * 重置文本组件的InputMap，恢复基本的文本编辑键绑定
+     * 注意：此方法已被新的KeyEventDispatcher方案替代，保留以备后用
+     */
+    @SuppressWarnings("unused")
+    private void resetTextInputMap(org.fife.ui.rsyntaxtextarea.RSyntaxTextArea textArea) {
+        // 此方法已废弃，保留签名以兼容
     }
 }

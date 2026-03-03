@@ -1,0 +1,36 @@
+=== Python Script Help ===
+
+Mode Selection:
+- 'Online Editor': Write Python code directly in the editor
+- 'Import File': Select a .py file from your computer
+
+Function Requirement:
+- Must define: def handle_request(request):
+- Must return: dict with 'status', 'headers', 'body'
+
+Request Object Fields:
+- request['url']       : Full URL (str)
+  Example: 'http://example.com/api/user?id=123'
+- request['method']    : HTTP method (str) - 'GET', 'POST', etc.
+- request['headers']   : Headers dict - request['headers']['Content-Type']
+- request['body']      : Request body as string
+- request['body_base64']: Body as base64 string (for binary data)
+- request['path']      : URL path (str) - '/api/user'
+- request['query']     : Query string (str) - 'id=123&name=test'
+- request['host']      : Hostname (str) - 'example.com'
+- request['port']      : Port number (int) - 80, 443, etc.
+- request['protocol']  : Protocol (str) - 'http' or 'https'
+
+Response Object Format:
+- 'status'     : HTTP status code (int, required)
+- 'headers'    : Response headers dict (optional)
+- 'body'       : Response body string (optional)
+- 'body_base64': Base64 encoded body (optional, use for binary)
+- 'delay'      : Delay in milliseconds (optional)
+
+Usage Examples:
+- Check URL:     if '/api/admin' in request['url']:
+- Check method:  if request['method'] == 'POST':
+- Get header:    content_type = request['headers'].get('Content-Type')
+- Check query:   if 'debug=1' in request['query']:
+- Access path:   path = request['path']
