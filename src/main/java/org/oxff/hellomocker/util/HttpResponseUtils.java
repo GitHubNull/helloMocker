@@ -6,6 +6,7 @@ import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.http.message.HttpHeader;
 import org.oxff.hellomocker.model.ResponseConfig;
 
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -88,6 +89,7 @@ public class HttpResponseUtils {
 
     /**
      * 从HttpResponse提取数据创建ResponseConfig
+     * 修复中文乱码：从Content-Type提取charset，正确使用编码解码body
      *
      * @param response HttpResponse对象
      * @return 响应配置
@@ -110,8 +112,29 @@ public class HttpResponseUtils {
                 ));
         config.setHeaders(headers);
 
-        // 提取Body
-        config.setBody(response.bodyToString());
+        // 提取Body - 修复中文乱码
+        // 从Content-Type header提取charset
+        Charset charset = StandardCharsets.UTF_8;
+        String contentType = headers.get("Content-Type");
+        if (contentType != null) {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                    "charset\\s*=\\s*['\"]?([^;'\"\\s]+)['\"]?", 
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
+            java.util.regex.Matcher matcher = pattern.matcher(contentType);
+            if (matcher.find()) {
+                String charsetName = matcher.group(1).trim();
+                try {
+                    charset = Charset.forName(charsetName);
+                } catch (Exception e) {
+                    // 使用默认UTF-8
+                }
+            }
+        }
+        
+        // 使用正确的编码解码body
+        byte[] bodyBytes = response.body().getBytes();
+        String body = new String(bodyBytes, charset);
+        config.setBody(body);
 
         return config;
     }
