@@ -36,17 +36,12 @@ public class PythonScriptHandler implements ResponseHandler {
             );
         }
 
-        // 优先使用脚本文件
+        // 只支持脚本文件
         if (config.getPythonFilePath() != null && !config.getPythonFilePath().trim().isEmpty()) {
             return pythonEngine.executeFromFile(context, config.getPythonFilePath());
         }
 
-        // 使用内联脚本
-        if (config.getPythonScript() != null && !config.getPythonScript().trim().isEmpty()) {
-            return pythonEngine.execute(context, config.getPythonScript());
-        }
-
-        return MockResponse.error("No Python script provided");
+        return MockResponse.error("No Python script file provided");
     }
 
     @Override

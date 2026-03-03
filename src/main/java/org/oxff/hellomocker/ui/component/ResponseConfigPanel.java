@@ -2,7 +2,6 @@ package org.oxff.hellomocker.ui.component;
 
 import burp.api.montoya.MontoyaApi;
 import org.oxff.hellomocker.model.ResponseConfig;
-import org.oxff.hellomocker.ui.util.FlatLafPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,7 +16,7 @@ import java.util.Map;
  * @author oxff
  * @version 1.0
  */
-public class ResponseConfigPanel extends FlatLafPanel {
+public class ResponseConfigPanel extends JPanel {
 
     private final MontoyaApi api;
 
@@ -31,7 +30,7 @@ public class ResponseConfigPanel extends FlatLafPanel {
     private JTextArea bodyArea;
 
     // Python脚本面板组件
-    private org.fife.ui.rsyntaxtextarea.RSyntaxTextArea pythonEditor;
+    private JTextArea pythonEditor;
     private JTextField pythonFileField;
 
     // 代理转发面板组件
@@ -111,56 +110,45 @@ public class ResponseConfigPanel extends FlatLafPanel {
 
         // 文件导入
         JPanel filePanel = new JPanel(new BorderLayout(5, 5));
-        filePanel.add(new JLabel("Script File (Optional):"), BorderLayout.WEST);
+        filePanel.add(new JLabel("Script File:*"), BorderLayout.WEST);
         pythonFileField = new JTextField();
         filePanel.add(pythonFileField, BorderLayout.CENTER);
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         JButton browseButton = new JButton("Browse...");
         browseButton.addActionListener(e -> browsePythonFile());
-        filePanel.add(browseButton, BorderLayout.EAST);
+        buttonPanel.add(browseButton);
+        
+        JButton viewButton = new JButton("View");
+        viewButton.addActionListener(e -> viewPythonFile());
+        buttonPanel.add(viewButton);
+        
+        filePanel.add(buttonPanel, BorderLayout.EAST);
         panel.add(filePanel, BorderLayout.NORTH);
 
-        // Python代码编辑器
-        JPanel editorPanel = new JPanel(new BorderLayout());
-        editorPanel.setBorder(BorderFactory.createTitledBorder("Python Script"));
-
-        pythonEditor = new org.fife.ui.rsyntaxtextarea.RSyntaxTextArea(20, 60);
-        pythonEditor.setSyntaxEditingStyle(org.fife.ui.rsyntaxtextarea.SyntaxConstants.SYNTAX_STYLE_PYTHON);
-        pythonEditor.setCodeFoldingEnabled(true);
-        pythonEditor.setAutoIndentEnabled(true);
-        pythonEditor.setTabSize(4);
-
-        // 设置默认代码模板
-        pythonEditor.setText(
-            "def handle_request(request):\n" +
-            "    \"\"\"\n" +
-            "    Handle HTTP request and return response.\n" +
-            "    \n" +
-            "    Args:\n" +
-            "        request: dict with url, method, headers, body, etc.\n" +
-            "    \n" +
-            "    Returns:\n" +
-            "        dict with status, headers, body\n" +
-            "    \"\"\"\n" +
-            "    return {\n" +
-            "        \"status\": 200,\n" +
-            "        \"headers\": {\"Content-Type\": \"application/json\"},\n" +
-            "        \"body\": '{\"code\": 0, \"message\": \"success\"}'\n" +
-            "    }\n"
-        );
-
-        org.fife.ui.rtextarea.RTextScrollPane scrollPane = new org.fife.ui.rtextarea.RTextScrollPane(pythonEditor);
-        editorPanel.add(scrollPane, BorderLayout.CENTER);
-
-        panel.add(editorPanel, BorderLayout.CENTER);
+        // 代码预览区域
+        JPanel previewPanel = new JPanel(new BorderLayout());
+        previewPanel.setBorder(BorderFactory.createTitledBorder("Script Preview (Read Only)"));
+        
+        pythonEditor = new JTextArea(15, 60);
+        pythonEditor.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        pythonEditor.setEditable(false);
+        pythonEditor.setLineWrap(false);
+        
+        JScrollPane scrollPane = new JScrollPane(pythonEditor);
+        previewPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        panel.add(previewPanel, BorderLayout.CENTER);
 
         // 帮助文本
         JTextArea helpText = new JTextArea(
             "Python Script Help:\n" +
-            "- The 'handle_request' function receives a request dict\n" +
+            "- Create a .py file with handle_request(request) function\n" +
+            "- Click 'Browse...' to select your Python script file\n" +
+            "- Click 'View' to preview the script content\n" +
             "- Request dict contains: url, method, headers, body, path, query, host, port, protocol\n" +
             "- Return a dict with: status (int), headers (dict), body (str)\n" +
-            "- Use 'body_base64' instead of 'body' for binary data\n" +
-            "- Use 'delay' (int, ms) to simulate network delay"
+            "- Use 'body_base64' instead of 'body' for binary data"
         );
         helpText.setEditable(false);
         helpText.setBackground(panel.getBackground());
@@ -169,6 +157,36 @@ public class ResponseConfigPanel extends FlatLafPanel {
         panel.add(helpText, BorderLayout.SOUTH);
 
         return panel;
+    }
+    
+    private void viewPythonFile() {
+        String filePath = pythonFileField.getText().trim();
+        if (filePath.isEmpty()) {
+            JOptionPane.showMessageDialog(this, 
+                "Please select a Python script file first.", 
+                "No File Selected", 
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        File file = new File(filePath);
+        if (!file.exists()) {
+            JOptionPane.showMessageDialog(this, 
+                "File not found: " + filePath, 
+                "File Not Found", 
+                JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        try {
+            String content = new String(java.nio.file.Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+            pythonEditor.setText(content);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, 
+                "Error reading file: " + e.getMessage(), 
+                "Error", 
+                JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JPanel createProxyForwardPanel() {
@@ -276,7 +294,6 @@ public class ResponseConfigPanel extends FlatLafPanel {
                 builder.body(bodyArea.getText());
             }
             case PYTHON_SCRIPT -> {
-                builder.pythonScript(pythonEditor.getText());
                 String filePath = pythonFileField.getText().trim();
                 if (!filePath.isEmpty()) {
                     builder.pythonFilePath(filePath);
@@ -359,12 +376,11 @@ public class ResponseConfigPanel extends FlatLafPanel {
                 }
             }
             case PYTHON_SCRIPT -> {
-                if (config.getPythonScript() != null) {
-                    pythonEditor.setText(config.getPythonScript());
-                }
                 if (config.getPythonFilePath() != null) {
                     pythonFileField.setText(config.getPythonFilePath());
                 }
+                // 清空预览区域
+                pythonEditor.setText("");
             }
             case PROXY_FORWARD -> {
                 if (config.getTargetHost() != null) {

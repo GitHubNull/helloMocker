@@ -33,6 +33,9 @@ public class MainTabPanel extends FlatLafPanel {
         this.configStorage = configStorage;
 
         initializeUI();
+        
+        // 应用 BurpSuite 主题到组件（关键：必须在初始化后调用）
+        api.userInterface().applyThemeToComponent(this);
     }
 
     private void initializeUI() {
