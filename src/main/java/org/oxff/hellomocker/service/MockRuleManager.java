@@ -5,6 +5,7 @@ import org.oxff.hellomocker.model.MockRule;
 import org.oxff.hellomocker.storage.ConfigStorage;
 import org.oxff.hellomocker.storage.MockRuleRepository;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -317,6 +318,32 @@ public class MockRuleManager {
                 logError("Error notifying listener", e);
             }
         }
+    }
+
+    /**
+     * 导出所有规则到指定路径
+     *
+     * @param exportPath 导出文件路径
+     * @throws IOException 导出失败时抛出
+     */
+    public void exportRules(Path exportPath) throws IOException {
+        repository.exportAll(exportPath);
+        log("Exported all rules to: " + exportPath);
+    }
+
+    /**
+     * 从指定路径导入规则
+     *
+     * @param importPath 导入文件路径
+     * @return 导入的规则数量
+     * @throws IOException 导入失败时抛出
+     */
+    public int importRules(Path importPath) throws IOException {
+        int count = repository.importFrom(importPath);
+        // 重新加载规则
+        loadRules();
+        log("Imported " + count + " rules from: " + importPath);
+        return count;
     }
 
     /**

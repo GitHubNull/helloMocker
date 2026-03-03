@@ -276,10 +276,9 @@ public class RuleListPanel extends FlatLafPanel implements MockRuleManager.RuleC
         if (result == JFileChooser.APPROVE_OPTION) {
             try {
                 java.nio.file.Path path = fileChooser.getSelectedFile().toPath();
-                int count = ruleManager.getAllRules().size(); // 临时获取当前规则数
-                // TODO: 实现导入逻辑
+                int count = ruleManager.importRules(path);
                 JOptionPane.showMessageDialog(this,
-                        "Rules imported successfully!",
+                        "Rules imported successfully!\n\nFile: " + path.toString() + "\nImported: " + count + " rules",
                         "Import",
                         JOptionPane.INFORMATION_MESSAGE);
                 refreshRules();
@@ -304,10 +303,19 @@ public class RuleListPanel extends FlatLafPanel implements MockRuleManager.RuleC
         int result = fileChooser.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             try {
-                java.nio.file.Path path = fileChooser.getSelectedFile().toPath();
-                // TODO: 实现导出逻辑
+                java.io.File selectedFile = fileChooser.getSelectedFile();
+                // 确保文件扩展名为.json
+                String filePath = selectedFile.getAbsolutePath();
+                if (!filePath.toLowerCase().endsWith(".json")) {
+                    filePath += ".json";
+                    selectedFile = new java.io.File(filePath);
+                }
+                
+                java.nio.file.Path path = selectedFile.toPath();
+                ruleManager.exportRules(path);
+                
                 JOptionPane.showMessageDialog(this,
-                        "Rules exported successfully!",
+                        "Rules exported successfully!\n\nFile: " + selectedFile.getAbsolutePath() + "\nRules: " + ruleManager.getAllRules().size(),
                         "Export",
                         JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception ex) {

@@ -1,7 +1,10 @@
 package org.oxff.hellomocker.storage;
 
 import burp.api.montoya.MontoyaApi;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.oxff.hellomocker.model.MockRule;
+import org.oxff.hellomocker.model.ResponseConfig;
 import org.oxff.hellomocker.util.JsonUtils;
 
 import java.io.IOException;
@@ -9,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -135,22 +139,50 @@ public class MockRuleRepository {
 
     /**
      * 导出所有规则到指定路径
+     * 对body内容进行Base64编码以避免特殊字符问题
      */
     public void exportAll(Path exportPath) throws IOException {
         List<MockRule> rules = loadAll();
+
+        // 对body进行Base64编码
+        for (MockRule rule : rules) {
+            if (rule.getResponseConfig() != null && rule.getResponseConfig().getBody() != null) {
+                String body = rule.getResponseConfig().getBody();
+                String encodedBody = Base64.getEncoder().encodeToString(body.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                rule.getResponseConfig().setBody(encodedBody);
+            }
+        }
+
         JsonUtils.writeToFile(rules, exportPath);
         log("Exported " + rules.size() + " rules to: " + exportPath);
     }
 
     /**
      * 从指定路径导入规则
+     * 对body内容进行Base64解码
      */
-    @SuppressWarnings("unchecked")
     public int importFrom(Path importPath) throws IOException {
-        List<MockRule> rules = JsonUtils.fromFile(importPath, List.class);
+        // 使用TypeReference解决泛型类型擦除问题
+        ObjectMapper mapper = JsonUtils.getObjectMapper();
+        List<MockRule> rules = mapper.readValue(importPath.toFile(), new TypeReference<List<MockRule>>() {
+        });
+
         int count = 0;
         for (MockRule rule : rules) {
             if (rule != null && rule.isValid()) {
+                // 对body进行Base64解码
+                if (rule.getResponseConfig() != null && rule.getResponseConfig().getBody() != null) {
+                    String body = rule.getResponseConfig().getBody();
+                    try {
+                        byte[] decodedBytes = Base64.getDecoder().decode(body);
+                        String decodedBody = new String(decodedBytes, java.nio.charset.StandardCharsets.UTF_8);
+                        rule.getResponseConfig().setBody(decodedBody);
+                    } catch (IllegalArgumentException e) {
+                        // 如果解码失败，说明可能不是Base64编码的，保持原样
+                        log("Body is not Base64 encoded for rule: " + rule.getName() + ", keeping as is");
+                    }
+                }
+
                 // 重新生成ID以避免冲突
                 rule.setId(java.util.UUID.randomUUID().toString());
                 save(rule);
