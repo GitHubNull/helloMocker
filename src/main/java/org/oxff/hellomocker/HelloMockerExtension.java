@@ -5,6 +5,7 @@ import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.extension.Extension;
 import burp.api.montoya.logging.Logging;
 import org.oxff.hellomocker.http.MockHttpHandler;
+import org.oxff.hellomocker.menu.SendToMockContextMenu;
 import org.oxff.hellomocker.service.MockRuleManager;
 import org.oxff.hellomocker.storage.ConfigStorage;
 import org.oxff.hellomocker.ui.MainTabPanel;
@@ -56,7 +57,9 @@ public class HelloMockerExtension implements BurpExtension {
             logging.logToOutput("HTTP handler registered successfully");
 
             // 注册右键菜单
-            // TODO: 在阶段四实现
+            SendToMockContextMenu contextMenu = new SendToMockContextMenu(ruleManager, configStorage, logging);
+            api.userInterface().registerContextMenuItemsProvider(contextMenu);
+            logging.logToOutput("Context menu registered successfully");
 
             logging.logToOutput("HelloMocker Extension initialized successfully!");
 
