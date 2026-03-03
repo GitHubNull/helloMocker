@@ -2,6 +2,7 @@ package org.oxff.hellomocker.menu;
 
 import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.logging.Logging;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
@@ -15,8 +16,12 @@ import org.oxff.hellomocker.util.HttpUtils;
 
 import javax.swing.*;
 import java.awt.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Send to Mock右键菜单提供器
@@ -89,8 +94,8 @@ public class SendToMockContextMenu implements ContextMenuItemsProvider {
 
             if (requestResponse.response() != null) {
                 statusCode = requestResponse.response().statusCode();
-                responseBody = requestResponse.response().bodyToString();
-                
+                responseBody = getResponseBodyString(requestResponse.response());
+
                 // 提取响应头
                 requestResponse.response().headers().forEach(header -> {
                     responseHeaders.put(header.name(), header.value());
@@ -149,6 +154,76 @@ public class SendToMockContextMenu implements ContextMenuItemsProvider {
         } catch (Exception e) {
             logError("Error creating Mock rule from Proxy History", e);
             showError("Error creating Mock rule: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 从响应头中提取字符编码
+     *
+     * @param response HTTP响应
+     * @return 检测到的字符编码，如果没有指定则返回UTF-8
+     */
+    private Charset extractCharsetFromResponse(HttpResponse response) {
+        if (response == null) {
+            return StandardCharsets.UTF_8;
+        }
+
+        // 从Content-Type头中提取charset
+        String contentType = null;
+        for (var header : response.headers()) {
+            if (header.name().equalsIgnoreCase("Content-Type")) {
+                contentType = header.value();
+                break;
+            }
+        }
+
+        if (contentType != null) {
+            // 尝试匹配 charset=xxx 或 charset="xxx"
+            Pattern pattern = Pattern.compile("charset\\s*=\\s*['\"]?([^;'\"\\s]+)['\"]?", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(contentType);
+            if (matcher.find()) {
+                String charsetName = matcher.group(1).trim();
+                try {
+                    return Charset.forName(charsetName);
+                } catch (Exception e) {
+                    // 如果charset名称无效，使用UTF-8
+                    log("Invalid charset in response: " + charsetName + ", using UTF-8");
+                }
+            }
+        }
+
+        // 默认使用UTF-8
+        return StandardCharsets.UTF_8;
+    }
+
+    /**
+     * 安全地获取响应体字符串，正确处理中文编码
+     *
+     * @param response HTTP响应
+     * @return 正确编码的响应体字符串
+     */
+    private String getResponseBodyString(HttpResponse response) {
+        if (response == null || response.body() == null) {
+            return "";
+        }
+
+        try {
+            // 检测字符编码
+            Charset charset = extractCharsetFromResponse(response);
+
+            // 获取原始字节并转换为字符串
+            byte[] bodyBytes = response.body().getBytes();
+            if (bodyBytes.length == 0) {
+                return "";
+            }
+
+            String decoded = new String(bodyBytes, charset);
+            log("Decoded response body with charset: " + charset.name() + ", length: " + decoded.length());
+            return decoded;
+        } catch (Exception e) {
+            logError("Error decoding response body, falling back to bodyToString()", e);
+            // 如果解码失败，回退到原来的方法
+            return response.bodyToString();
         }
     }
 

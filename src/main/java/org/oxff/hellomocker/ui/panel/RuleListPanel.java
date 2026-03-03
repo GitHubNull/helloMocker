@@ -10,6 +10,8 @@ import org.oxff.hellomocker.ui.util.FlatLafPanel;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -104,7 +106,8 @@ public class RuleListPanel extends FlatLafPanel implements MockRuleManager.RuleC
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // 不允许直接编辑
+                // 只有Enabled列(第5列)可以直接编辑(点击切换)
+                return column == 5;
             }
 
             @Override
@@ -115,6 +118,20 @@ public class RuleListPanel extends FlatLafPanel implements MockRuleManager.RuleC
                 return String.class;
             }
         };
+
+        // 添加表格模型监听器,监听Enabled列的变化
+        tableModel.addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                // 只处理更新事件且是Enabled列(第5列)
+                if (e.getType() == TableModelEvent.UPDATE && e.getColumn() == 5) {
+                    int row = e.getFirstRow();
+                    if (row >= 0) {
+                        toggleRuleEnabled(row);
+                    }
+                }
+            }
+        });
 
         // 创建表格
         ruleTable = new MockRuleTable(tableModel, api, ruleManager);
@@ -174,6 +191,20 @@ public class RuleListPanel extends FlatLafPanel implements MockRuleManager.RuleC
                 rule.isEnabled()
             };
             tableModel.addRow(row);
+        }
+    }
+
+    /**
+     * 切换指定行规则的启用状态
+     *
+     * @param row 表格行索引
+     */
+    private void toggleRuleEnabled(int row) {
+        List<MockRule> rules = ruleManager.getAllRules();
+        if (row >= 0 && row < rules.size()) {
+            MockRule rule = rules.get(row);
+            // 切换启用状态
+            ruleManager.toggleRuleEnabled(rule.getId());
         }
     }
 
