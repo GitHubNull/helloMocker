@@ -59,6 +59,30 @@ public class ResourceLoader {
     }
     
     /**
+     * 从资源文件读取FastAPI服务器模板
+     */
+    public static String loadFastAPIServerTemplate() {
+        String content = loadResourceAsString("org/oxff/hellomocker/fastapi_server_template.py");
+        if (content == null) {
+            // 返回默认模板（备用）
+            return getDefaultFastAPIServerTemplate();
+        }
+        return content;
+    }
+    
+    /**
+     * 从资源文件读取Flask服务器模板
+     */
+    public static String loadFlaskServerTemplate() {
+        String content = loadResourceAsString("org/oxff/hellomocker/flask_server_template.py");
+        if (content == null) {
+            // 返回默认模板（备用）
+            return getDefaultFlaskServerTemplate();
+        }
+        return content;
+    }
+    
+    /**
      * 默认Python模板（备用）
      */
     private static String getDefaultPythonTemplate() {
@@ -78,5 +102,36 @@ public class ResourceLoader {
         return "Python Script Help:\n" +
                "- The script must contain a handle_request(request) function\n" +
                "- Return a dict with: status, headers, body";
+    }
+    
+    /**
+     * 默认FastAPI服务器模板（备用）
+     */
+    private static String getDefaultFastAPIServerTemplate() {
+        return "#!/usr/bin/env python3\n" +
+               "# FastAPI Server Template for HelloMocker\n\n" +
+               "from fastapi import FastAPI\n" +
+               "import uvicorn\n\n" +
+               "app = FastAPI()\n\n" +
+               "@app.api_route(\"/\", methods=['GET', 'POST', 'PUT', 'DELETE'])\n" +
+               "async def catch_all():\n" +
+               "    return {'code': 0, 'message': 'FastAPI server is running'}\n\n" +
+               "if __name__ == '__main__':\n" +
+               "    uvicorn.run(app, host='127.0.0.1', port=8765)\n";
+    }
+    
+    /**
+     * 默认Flask服务器模板（备用）
+     */
+    private static String getDefaultFlaskServerTemplate() {
+        return "#!/usr/bin/env python3\n" +
+               "# Flask Server Template for HelloMocker\n\n" +
+               "from flask import Flask\n\n" +
+               "app = Flask(__name__)\n\n" +
+               "@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE'])\n" +
+               "def catch_all(path):\n" +
+               "    return {'code': 0, 'message': 'Flask server is running'}\n\n" +
+               "if __name__ == '__main__':\n" +
+               "    app.run(host='127.0.0.1', port=8765)\n";
     }
 }

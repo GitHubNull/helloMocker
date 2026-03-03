@@ -6,6 +6,7 @@ import burp.api.montoya.http.handler.*;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.logging.Logging;
+import org.oxff.hellomocker.handler.ProxyForwardHandler;
 import org.oxff.hellomocker.handler.PythonScriptHandler;
 import org.oxff.hellomocker.model.MockContext;
 import org.oxff.hellomocker.model.MockResponse;
@@ -34,6 +35,7 @@ public class MockHttpHandler implements HttpHandler {
     private final ConfigStorage configStorage;
     private final Logging logging;
     private final PythonScriptHandler pythonScriptHandler;
+    private final ProxyForwardHandler proxyForwardHandler;
 
     // 用于存储当前正在处理的请求和规则映射
     // Key: messageId, Value: ruleId
@@ -44,6 +46,7 @@ public class MockHttpHandler implements HttpHandler {
         this.configStorage = configStorage;
         this.logging = logging;
         this.pythonScriptHandler = new PythonScriptHandler(configStorage);
+        this.proxyForwardHandler = new ProxyForwardHandler();
         this.activeMockRequests = new ConcurrentHashMap<>();
     }
 
@@ -182,9 +185,21 @@ public class MockHttpHandler implements HttpHandler {
         return switch (config.getType()) {
             case STATIC -> generateStaticResponse(config);
             case PYTHON_SCRIPT -> generatePythonScriptResponse(context, config);
-            case PROXY_FORWARD -> MockResponse.error("Proxy forward not implemented yet");
+            case PROXY_FORWARD -> generateProxyForwardResponse(context, config);
             default -> MockResponse.error("Unknown response type");
         };
+    }
+
+    /**
+     * 生成代理转发响应
+     */
+    private MockResponse generateProxyForwardResponse(MockContext context, ResponseConfig config) {
+        try {
+            return proxyForwardHandler.handle(context, config);
+        } catch (Exception e) {
+            logError("Error forwarding request to proxy", e);
+            return MockResponse.error("Proxy forward failed: " + e.getMessage());
+        }
     }
 
     /**

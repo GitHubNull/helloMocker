@@ -289,7 +289,7 @@ public class ResponseConfigPanel extends JPanel {
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-        targetHostField = new JTextField(30);
+        targetHostField = new JTextField("127.0.0.1", 30);
         targetHostField.setToolTipText("Target host IP or domain (e.g., 127.0.0.1 or localhost)");
         panel.add(targetHostField, gbc);
 
@@ -302,18 +302,37 @@ public class ResponseConfigPanel extends JPanel {
 
         gbc.gridx = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        SpinnerNumberModel portModel = new SpinnerNumberModel(8080, 1, 65535, 1);
+        SpinnerNumberModel portModel = new SpinnerNumberModel(8765, 1, 65535, 1);
         targetPortSpinner = new JSpinner(portModel);
         panel.add(targetPortSpinner, gbc);
 
-        // SSL选项
+        // SSL选项和导出按钮放在同一行
         gbc.gridx = 0;
         gbc.gridy = 2;
         panel.add(new JLabel("Use SSL:"), gbc);
 
-        gbc.gridx = 1;
+        JPanel sslAndExportPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         useSslCheckBox = new JCheckBox();
-        panel.add(useSslCheckBox, gbc);
+        sslAndExportPanel.add(useSslCheckBox);
+        
+        // 添加分隔
+        sslAndExportPanel.add(Box.createHorizontalStrut(20));
+        
+        // FastAPI导出按钮
+        JButton exportFastapiButton = new JButton("Export FastAPI Server");
+        exportFastapiButton.setToolTipText("Export FastAPI server template to receive forwarded requests");
+        exportFastapiButton.addActionListener(e -> exportFastAPIServerTemplate());
+        sslAndExportPanel.add(exportFastapiButton);
+        
+        // Flask导出按钮
+        JButton exportFlaskButton = new JButton("Export Flask Server");
+        exportFlaskButton.setToolTipText("Export Flask server template to receive forwarded requests");
+        exportFlaskButton.addActionListener(e -> exportFlaskServerTemplate());
+        sslAndExportPanel.add(exportFlaskButton);
+        
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(sslAndExportPanel, gbc);
 
         // 帮助文本
         gbc.gridx = 0;
@@ -324,14 +343,18 @@ public class ResponseConfigPanel extends JPanel {
         JTextArea helpText = new JTextArea(
             "Proxy Forward Help:\n" +
             "- Forwards the matched request to the specified target\n" +
-            "- Target Host: IP address or domain name\n" +
-            "- Target Port: Port number (1-65535)\n" +
+            "- Target Host: IP address or domain name (default: 127.0.0.1)\n" +
+            "- Target Port: Port number (default: 8765)\n" +
             "- Use SSL: Enable HTTPS connection\n\n" +
+            "Export Server Templates:\n" +
+            "- FastAPI Server: pip install fastapi uvicorn\n" +
+            "- Flask Server: pip install flask\n" +
+            "\n" +
             "Example:\n" +
             "- Target Host: 127.0.0.1\n" +
-            "- Target Port: 5000\n" +
+            "- Target Port: 8765\n" +
             "- Use SSL: unchecked\n" +
-            "=> Forwards to http://127.0.0.1:5000"
+            "=> Forwards to http://127.0.0.1:8765"
         );
         helpText.setEditable(false);
         helpText.setBackground(panel.getBackground());
@@ -400,6 +423,106 @@ public class ResponseConfigPanel extends JPanel {
                 
                 JOptionPane.showMessageDialog(this,
                         "Template exported successfully to:\n" + selectedFile.getAbsolutePath(),
+                        "Export Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to export template: " + e.getMessage(),
+                        "Export Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    /**
+     * 导出FastAPI服务器模板
+     */
+    private void exportFastAPIServerTemplate() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Export FastAPI Server Template");
+        fileChooser.setSelectedFile(new File("fastapi_receiver_server.py"));
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                "Python Files", "py"));
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            
+            // 检查文件是否存在，提示是否覆盖
+            if (selectedFile.exists()) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "File already exists. Overwrite?",
+                        "Confirm Overwrite",
+                        JOptionPane.YES_NO_OPTION);
+                if (confirm != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
+            
+            try {
+                // 从资源文件读取FastAPI模板
+                String template = ResourceLoader.loadFastAPIServerTemplate();
+                java.nio.file.Files.write(selectedFile.toPath(), 
+                        template.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                
+                JOptionPane.showMessageDialog(this,
+                        "FastAPI server template exported successfully!\n\n" +
+                        "Location: " + selectedFile.getAbsolutePath() + "\n\n" +
+                        "Prerequisites:\n" +
+                        "  pip install fastapi uvicorn\n\n" +
+                        "Usage:\n" +
+                        "  python " + selectedFile.getName() + "\n" +
+                        "  Server will start on http://127.0.0.1:8765",
+                        "Export Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this,
+                        "Failed to export template: " + e.getMessage(),
+                        "Export Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+    
+    /**
+     * 导出Flask服务器模板
+     */
+    private void exportFlaskServerTemplate() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Export Flask Server Template");
+        fileChooser.setSelectedFile(new File("flask_receiver_server.py"));
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                "Python Files", "py"));
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            
+            // 检查文件是否存在，提示是否覆盖
+            if (selectedFile.exists()) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "File already exists. Overwrite?",
+                        "Confirm Overwrite",
+                        JOptionPane.YES_NO_OPTION);
+                if (confirm != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
+            
+            try {
+                // 从资源文件读取Flask模板
+                String template = ResourceLoader.loadFlaskServerTemplate();
+                java.nio.file.Files.write(selectedFile.toPath(), 
+                        template.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                
+                JOptionPane.showMessageDialog(this,
+                        "Flask server template exported successfully!\n\n" +
+                        "Location: " + selectedFile.getAbsolutePath() + "\n\n" +
+                        "Prerequisites:\n" +
+                        "  pip install flask\n\n" +
+                        "Usage:\n" +
+                        "  python " + selectedFile.getName() + "\n" +
+                        "  Server will start on http://127.0.0.1:8765",
                         "Export Success",
                         JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
