@@ -81,18 +81,19 @@ jobs:
           POM_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "version=$POM_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Verify version consistency
+      - name: Update pom.xml version to match tag
         run: |
           TAG_VERSION="${{ needs.validate-version.outputs.version }}"
           POM_VERSION="${{ steps.pom_version.outputs.version }}"
           echo "Tag version: $TAG_VERSION"
           echo "POM version: $POM_VERSION"
           
-          # 检查pom.xml版本与tag版本是否一致
+          # 如果版本不一致，自动更新pom.xml版本
           if [[ "$POM_VERSION" != "$TAG_VERSION" ]]; then
-            echo "Warning: POM version ($POM_VERSION) does not match tag version ($TAG_VERSION)"
-            echo "Please update pom.xml version to match the release tag"
-            exit 1
+            echo "Updating pom.xml version from $POM_VERSION to $TAG_VERSION"
+            mvn versions:set -DnewVersion=$TAG_VERSION -DgenerateBackupPoms=false
+          else
+            echo "Version already matches, no update needed"
           fi
 
       - name: Rename JAR for release
