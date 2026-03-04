@@ -336,11 +336,8 @@ jobs:
           draft: false
           prerelease: ${{ needs.validate-version.outputs.prerelease == 'true' }}
           files: |
-            release/helloMocker-*.jar
-            release/helloMocker-api-*.jar
-            release/helloMocker-api-example-*.jar
-            release/helloMocker-example-handler-*.jar
-            release/examples-source-*.zip
+            release/*.jar
+            release/*.zip
           generate_release_notes: false
           fail_on_unmatched_files: false
           overwrite_files: true
