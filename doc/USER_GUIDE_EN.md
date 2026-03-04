@@ -306,7 +306,9 @@ Suitable for scenarios requiring Java code to process requests.
 
 3. **Install API to Local Maven Repository**
 
-Before adding dependencies, you need to install helloMocker-api to your local Maven repository:
+Before adding dependencies, you need to install helloMocker-api to your local Maven repository. There are two ways:
+
+**Method A: Build and Install from Source (Recommended for Developers)**
 
 ```bash
 # Clone HelloMocker repository
@@ -316,6 +318,21 @@ cd helloMocker
 # Install API module to local repository
 mvn clean install -pl helloMocker-api
 ```
+
+**Method B: Directly Install Downloaded JAR (Recommended for Users)**
+
+If you have already downloaded `helloMocker-api-xxx.jar` from GitHub Releases:
+
+```bash
+mvn install:install-file \
+  "-Dfile=path/helloMocker-api-1.8.0-alpha.2.jar" \
+  "-DgroupId=oxff.org" \
+  "-DartifactId=helloMocker-api" \
+  "-Dversion=1.8.0-alpha.2" \
+  "-Dpackaging=jar"
+```
+
+**Note**: If the `-Dfile` path contains spaces or special characters, it must be wrapped in quotes.
 
 4. **Implement IMockHandler Interface**
 

@@ -306,7 +306,9 @@ HelloMocker 插件主界面分为三个标签页：
 
 3. **安装 API 到本地 Maven 仓库**
 
-在添加依赖之前，需要先将 helloMocker-api 安装到本地 Maven 仓库：
+在添加依赖之前，需要先将 helloMocker-api 安装到本地 Maven 仓库。有两种方式：
+
+**方式 A：从源码构建安装（推荐开发者）**
 
 ```bash
 # 克隆 HelloMocker 仓库
@@ -316,6 +318,21 @@ cd helloMocker
 # 安装 API 模块到本地仓库
 mvn clean install -pl helloMocker-api
 ```
+
+**方式 B：直接安装下载的 JAR 包（推荐用户）**
+
+如果你已经从 GitHub Releases 下载了 `helloMocker-api-xxx.jar`：
+
+```bash
+mvn install:install-file \
+  "-Dfile=路径/helloMocker-api-1.8.0-alpha.2.jar" \
+  "-DgroupId=oxff.org" \
+  "-DartifactId=helloMocker-api" \
+  "-Dversion=1.8.0-alpha.2" \
+  "-Dpackaging=jar"
+```
+
+**注意**：`-Dfile` 路径如果包含空格或特殊字符，必须用引号包裹。
 
 4. **实现 IMockHandler 接口**
 
