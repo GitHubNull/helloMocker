@@ -232,7 +232,7 @@ HelloMocker 插件主界面分为三个标签页：
 
 ### 4. JAR 扩展（JAR Extension）
 
-适用于需要 Java 代码处理请求的场景（P2 功能）。
+适用于需要 Java 代码处理请求的场景。
 
 **配置项**：
 
@@ -240,6 +240,21 @@ HelloMocker 插件主界面分为三个标签页：
 |------|------|------|
 | JAR 文件 | 包含处理器的 JAR 包路径 | `/path/to/myhandler.jar` |
 | 处理器类 | 实现 IMockHandler 接口的类全名 | `com.example.MyHandler` |
+
+**操作步骤**：
+
+1. **填写配置信息**：
+   - 点击 **Browse...** 选择 JAR 文件，或手动输入完整路径
+   - 在 **Handler Class** 字段输入完整的类全限定名（如 `com.example.MyHandler`）
+
+2. **加载 JAR（可选但推荐）**：
+   - 点击 **Load** 按钮预加载 JAR 文件
+   - 如果加载成功，状态会显示为 **Status: Loaded - [处理器名称]**
+   - 如果加载失败，会弹出错误提示，请根据提示检查配置
+
+3. **保存规则**：
+   - 点击 **Save** 保存规则
+   - 即使不点击 Load，JAR 也会在请求匹配时自动加载
 
 **工作原理**：
 1. 插件使用 URLClassLoader 动态加载 JAR 文件
@@ -259,6 +274,11 @@ HelloMocker 插件主界面分为三个标签页：
 3. 实现 `IMockHandler` 接口
 4. 打包为 JAR 文件
 5. 在插件中配置 JAR 路径和类名
+
+**注意事项**：
+- **类名必须完整**：使用完整的类全限定名（包含包名），如 `com.example.MyHandler`，不能只写 `MyHandler`
+- **提前验证**：建议在保存规则前点击 Load 按钮验证 JAR 是否能正常加载
+- **路径问题**：确保 JAR 文件路径正确，使用 Browse 按钮可以避免路径错误
 
 **示例处理器代码**：
 
@@ -800,26 +820,35 @@ def handle_request(request):
 
 ### Q8: JAR 扩展加载失败怎么办？
 
-**可能原因及解决方法**：
+**常见错误及解决方法**：
 
-1. **JAR 文件路径错误**
-   - 检查 JAR 文件路径是否正确
-   - 使用 Browse 按钮选择文件
+#### 错误 1: "JAR file path is not configured"
+- **原因**：没有填写 JAR 文件路径
+- **解决**：点击 Browse 按钮选择 JAR 文件，或手动输入完整路径
 
-2. **类名不正确**
-   - 确保输入的是完整的类全名（包含包名）
-   - 示例：`com.example.MyHandler` 而不是 `MyHandler`
+#### 错误 2: "Handler class name is not configured"
+- **原因**：没有填写处理器类名
+- **解决**：在 Handler Class 字段输入完整的类全限定名（如 `com.example.MyHandler`）
 
-3. **未实现 IMockHandler 接口**
-   - 检查类是否实现了 `IMockHandler` 接口
-   - 查看 JAR 是否包含插件 API 依赖
+#### 错误 3: "JAR file not found"
+- **原因**：JAR 文件路径不正确或文件不存在
+- **解决**：
+  - 检查路径是否正确
+  - 使用 Browse 按钮重新选择文件
+  - 确保文件没有被移动或删除
 
-4. **缺少无参构造函数**
-   - 确保处理器类有 public 无参构造函数
+#### 错误 4: "Failed to load JAR extension"
+- **原因**：JAR 文件格式不正确或类加载失败
+- **解决**：
+  1. **类名不正确**：确保使用完整的类全限定名（包含包名），如 `com.example.MyHandler`，不能只写 `MyHandler`
+  2. **未实现 IMockHandler 接口**：检查类是否实现了 `IMockHandler` 接口
+  3. **缺少无参构造函数**：确保处理器类有 public 无参构造函数
+  4. **依赖冲突**：检查 JAR 是否包含与 BurpSuite 冲突的依赖
 
-5. **依赖冲突**
-   - 检查 JAR 是否包含与 BurpSuite 冲突的依赖
-   - 使用 Maven Shade 插件打包时可排除冲突依赖
+#### 调试技巧
+1. **使用 Load 按钮预验证**：在保存规则前点击 Load 按钮，可以提前发现问题
+2. **查看 Burp Output 窗口**：详细的错误堆栈会输出到 BurpSuite 的 Output 窗口
+3. **验证 JAR 内容**：使用 `jar tf your.jar` 命令查看 JAR 内容，确认类文件存在
 
 ### Q9: 中文显示乱码怎么办？
 
@@ -887,5 +916,5 @@ def handle_request(request):
 
 ---
 
-**文档版本**: 1.0  
-**最后更新**: 2026-03-03
+**文档版本**: 1.1  
+**最后更新**: 2026-03-04

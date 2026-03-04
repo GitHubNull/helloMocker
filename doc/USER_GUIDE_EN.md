@@ -232,7 +232,7 @@ Useful for forwarding requests to other servers for processing.
 
 ### 4. JAR Extension
 
-Suitable for scenarios requiring Java code to process requests (P2 feature).
+Suitable for scenarios requiring Java code to process requests.
 
 **Configuration Items**:
 
@@ -240,6 +240,21 @@ Suitable for scenarios requiring Java code to process requests (P2 feature).
 |-------|-------------|---------|
 | JAR File | Path to the JAR package containing the handler | `/path/to/myhandler.jar` |
 | Handler Class | Fully qualified class name implementing IMockHandler | `com.example.MyHandler` |
+
+**Operation Steps**:
+
+1. **Fill in Configuration**:
+   - Click **Browse...** to select the JAR file, or manually enter the full path
+   - Enter the fully qualified class name in the **Handler Class** field (e.g., `com.example.MyHandler`)
+
+2. **Load JAR (Optional but Recommended)**:
+   - Click the **Load** button to preload the JAR file
+   - If loaded successfully, the status will show **Status: Loaded - [Handler Name]**
+   - If loading fails, an error message will pop up - check your configuration according to the提示
+
+3. **Save Rule**:
+   - Click **Save** to save the rule
+   - Even without clicking Load, the JAR will be automatically loaded when a request matches
 
 **How It Works**:
 1. The extension uses URLClassLoader to dynamically load the JAR file
@@ -259,6 +274,11 @@ Suitable for scenarios requiring Java code to process requests (P2 feature).
 3. Implement the `IMockHandler` interface
 4. Package as a JAR file
 5. Configure JAR path and class name in the plugin
+
+**Important Notes**:
+- **Class name must be complete**: Use the fully qualified class name (including package), e.g., `com.example.MyHandler`, not just `MyHandler`
+- **Pre-validation**: It's recommended to click the Load button before saving to verify the JAR can be loaded properly
+- **Path issues**: Ensure the JAR file path is correct; using the Browse button can help avoid path errors
 
 **Example Handler Code**:
 
@@ -790,26 +810,35 @@ Currently, the extension does not have a one-click clear feature. You can:
 
 ### Q8: JAR extension failed to load?
 
-**Possible Causes and Solutions**:
+**Common Errors and Solutions**:
 
-1. **Incorrect JAR file path**
-   - Check if the JAR file path is correct
-   - Use the Browse button to select the file
+#### Error 1: "JAR file path is not configured"
+- **Cause**: JAR file path is not filled in
+- **Solution**: Click the Browse button to select the JAR file, or manually enter the full path
 
-2. **Incorrect class name**
-   - Ensure you entered the full qualified class name (including package)
-   - Example: `com.example.MyHandler` not `MyHandler`
+#### Error 2: "Handler class name is not configured"
+- **Cause**: Handler class name is not filled in
+- **Solution**: Enter the fully qualified class name in the Handler Class field (e.g., `com.example.MyHandler`)
 
-3. **IMockHandler interface not implemented**
-   - Check if the class implements the `IMockHandler` interface
-   - Check if the JAR includes plugin API dependencies
+#### Error 3: "JAR file not found"
+- **Cause**: JAR file path is incorrect or file does not exist
+- **Solution**:
+  - Check if the path is correct
+  - Use the Browse button to reselect the file
+  - Ensure the file has not been moved or deleted
 
-4. **Missing no-arg constructor**
-   - Ensure the handler class has a public no-arg constructor
+#### Error 4: "Failed to load JAR extension"
+- **Cause**: JAR file format is incorrect or class loading failed
+- **Solution**:
+  1. **Incorrect class name**: Ensure using the fully qualified class name (including package), e.g., `com.example.MyHandler`, not just `MyHandler`
+  2. **IMockHandler interface not implemented**: Check if the class implements the `IMockHandler` interface
+  3. **Missing no-arg constructor**: Ensure the handler class has a public no-arg constructor
+  4. **Dependency conflicts**: Check if the JAR contains dependencies conflicting with BurpSuite
 
-5. **Dependency conflicts**
-   - Check if the JAR contains dependencies conflicting with BurpSuite
-   - When packaging with Maven Shade plugin, you can exclude conflicting dependencies
+#### Debugging Tips
+1. **Use Load button for pre-validation**: Click the Load button before saving the rule to detect issues early
+2. **Check Burp Output window**: Detailed error stack traces are output to BurpSuite's Output window
+3. **Verify JAR contents**: Use `jar tf your.jar` command to view JAR contents and confirm class files exist
 
 ### Q9: Chinese characters display as garbled text?
 
@@ -877,5 +906,5 @@ If you encounter issues during use:
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2026-03-03
+**Document Version**: 1.1  
+**Last Updated**: 2026-03-04
