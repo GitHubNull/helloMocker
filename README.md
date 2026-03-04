@@ -177,23 +177,76 @@ def handle_request(request):
 ## 📁 项目结构
 
 ```
-helloMocker/
-├── src/main/java/org/oxff/hellomocker/
-│   ├── HelloMockerExtension.java      # 插件入口
-│   ├── api/                            # API 接口
-│   ├── engine/                         # Python 脚本引擎
-│   ├── handler/                        # 响应处理器
-│   ├── http/                           # HTTP 处理器
-│   ├── menu/                           # 右键菜单
-│   ├── model/                          # 数据模型
-│   ├── service/                        # 业务逻辑
-│   ├── storage/                        # 数据存储
-│   ├── ui/                             # 界面组件
-│   └── util/                           # 工具类
-├── doc/                                # 文档
-├── target/                             # 构建输出
-└── pom.xml                             # Maven 配置
+helloMocker/                                    # 主项目（Maven 多模块）
+├── pom.xml                                     # 父 POM（多模块配置）
+├── helloMocker-api/                            # API 模块（给用户依赖）
+│   ├── pom.xml
+│   └── src/main/java/org/oxff/hellomocker/api/
+│       └── IMockHandler.java                   # JAR 扩展接口
+├── helloMocker-plugin/                         # 插件模块（Burp 插件本体）
+│   ├── pom.xml
+│   └── src/main/java/org/oxff/hellomocker/
+│       ├── HelloMockerExtension.java           # 插件入口
+│       ├── handler/                            # 响应处理器
+│       ├── http/                               # HTTP 处理器
+│       ├── menu/                               # 右键菜单
+│       ├── model/                              # 数据模型
+│       ├── service/                            # 业务逻辑
+│       ├── storage/                            # 数据存储
+│       ├── ui/                                 # 界面组件
+│       └── util/                               # 工具类
+├── examples/                                   # 示例项目
+│   └── jar-extension/                          # JAR 扩展示例
+│       ├── pom.xml
+│       ├── README.md                           # 详细开发指南
+│       └── src/main/java/com/example/
+│           └── ExampleHandler.java             # 示例处理器
+├── doc/                                        # 文档
+│   ├── USER_GUIDE.md                           # 使用教程
+│   └── USER_GUIDE_EN.md                        # 英文教程
+├── README.md                                   # 本文件
+└── README_EN.md                                # 英文 README
 ```
+
+## 📦 JAR 扩展开发（Stage 6）
+
+HelloMocker 支持加载自定义 JAR 包实现复杂的请求处理逻辑。
+
+### 快速开始
+
+**最简单的方式：使用示例项目**
+
+1. **复制示例项目**：
+   ```bash
+   cp -r examples/jar-extension my-handler
+   cd my-handler
+   ```
+
+2. **修改处理器类**：编辑 `src/main/java/com/example/ExampleHandler.java`
+
+3. **构建 JAR**：
+   ```bash
+   # 先安装 HelloMocker API 到本地仓库
+   cd ..
+   mvn clean install
+   
+   # 然后构建你的处理器
+   cd my-handler
+   mvn clean package
+   ```
+
+4. **在插件中使用**：
+   - 创建/编辑规则，选择 **JAR_EXTENSION** 响应类型
+   - 配置 JAR 文件路径和处理器类名（如：`com.example.ExampleHandler`）
+   - 点击 **Load** 加载处理器
+
+### 完整开发指南
+
+查看 [examples/jar-extension/README.md](examples/jar-extension/README.md) 获取：
+- 详细的 IMockHandler 接口说明
+- 请求处理和响应构建示例
+- Maven 配置详解
+- 常见问题解答
 
 ## 🤝 参与贡献
 
@@ -208,61 +261,6 @@ helloMocker/
 ## 📄 开源协议
 
 本项目采用 [MIT](LICENSE) 协议开源。
-
-## 📦 JAR 扩展开发（Stage 6）
-
-HelloMocker 支持加载自定义 JAR 包实现复杂的请求处理逻辑。
-
-### 快速开始
-
-1. **实现 IMockHandler 接口**
-
-```java
-package com.example;
-
-import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.http.message.responses.HttpResponse;
-import org.oxff.hellomocker.api.IMockHandler;
-
-public class MyHandler implements IMockHandler {
-    
-    @Override
-    public HttpResponse handleRequest(HttpRequest request) {
-        // 自定义处理逻辑
-        String body = "{\"message\": \"Hello from JAR\"}";
-        String response = "HTTP/1.1 200 OK\r\n" +
-                "Content-Type: application/json\r\n\r\n" +
-                body;
-        return HttpResponse.httpResponse(response);
-    }
-    
-    @Override
-    public String getName() {
-        return "My Custom Handler";
-    }
-}
-```
-
-2. **打包 JAR**
-
-```bash
-mvn clean package
-```
-
-3. **在插件中使用**
-   - 创建/编辑规则，选择 **JAR_EXTENSION** 响应类型
-   - 配置 JAR 文件路径和处理器类名（如：`com.example.MyHandler`）
-   - 点击 **Load** 加载处理器
-
-### 接口说明
-
-**IMockHandler 接口方法：**
-
-- `handleRequest(HttpRequest request)`: 处理请求并返回响应
-- `getName()`: 返回处理器名称
-- `getDescription()`: 返回处理器描述
-- `init()`: 初始化回调（可选）
-- `destroy()`: 销毁回调（可选）
 
 ## 🙏 致谢
 
