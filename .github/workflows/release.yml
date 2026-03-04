@@ -330,6 +330,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
           name: HelloMocker v${{ needs.validate-version.outputs.full_version }}
           body_path: CHANGELOG.md
           draft: false
