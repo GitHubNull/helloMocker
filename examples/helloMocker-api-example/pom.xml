@@ -93,12 +93,5 @@
             <name>Maven Central</name>
             <url>https://repo.maven.apache.org/maven2</url>
         </repository>
-        
-        <!-- 本地仓库 - 需要先安装主项目到本地Maven仓库 -->
-        <repository>
-            <id>local</id>
-            <name>Local Maven Repository</name>
-            <url>file://${user.home}/.m2/repository</url>
-        </repository>
     </repositories>
 </project>

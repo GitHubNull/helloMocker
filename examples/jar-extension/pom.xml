@@ -84,12 +84,5 @@
             <name>Maven Central</name>
             <url>https://repo.maven.apache.org/maven2</url>
         </repository>
-        
-        <!-- Local repository for HelloMocker API (install locally first) -->
-        <repository>
-            <id>local-repo</id>
-            <name>Local Repository</name>
-            <url>file://${project.basedir}/../../helloMocker-api/target</url>
-        </repository>
     </repositories>
 </project>

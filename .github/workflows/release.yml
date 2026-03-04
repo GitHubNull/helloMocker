@@ -143,18 +143,20 @@ jobs:
         run: |
           TAG_VERSION="${{ needs.validate-version.outputs.full_version }}"
           
-          # 使用xmlstarlet或更精确的sed来更新版本号
-          # 只更新 helloMocker.version 属性，不影响其他version标签
+          # 只更新 helloMocker.version 属性（依赖版本）
+          # 项目自身版本使用 mvn versions:set 更新
           
           # 更新 helloMocker-api-example
           sed -i "s|<helloMocker.version>[^<]*</helloMocker.version>|<helloMocker.version>${TAG_VERSION}</helloMocker.version>|g" examples/helloMocker-api-example/pom.xml
-          # 更新项目自身版本（第一个出现的<version>标签在<artifactId>之后）
-          sed -i "0,/<artifactId>helloMocker-api-example<\/artifactId>/{ n; s|<version>[^<]*</version>|<version>${TAG_VERSION}</version>|; }" examples/helloMocker-api-example/pom.xml
+          cd examples/helloMocker-api-example
+          mvn versions:set -DnewVersion=${TAG_VERSION} -DgenerateBackupPoms=false
+          cd ../..
           
           # 更新 jar-extension
           sed -i "s|<helloMocker.version>[^<]*</helloMocker.version>|<helloMocker.version>${TAG_VERSION}</helloMocker.version>|g" examples/jar-extension/pom.xml
-          # 更新项目自身版本
-          sed -i "0,/<artifactId>helloMocker-example-handler<\/artifactId>/{ n; s|<version>[^<]*</version>|<version>${TAG_VERSION}</version>|; }" examples/jar-extension/pom.xml
+          cd examples/jar-extension
+          mvn versions:set -DnewVersion=${TAG_VERSION} -DgenerateBackupPoms=false
+          cd ../..
           
           echo "Updated example project versions to ${TAG_VERSION}"
 
