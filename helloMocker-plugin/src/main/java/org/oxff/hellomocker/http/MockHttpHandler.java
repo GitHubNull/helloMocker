@@ -248,15 +248,32 @@ public class MockHttpHandler implements HttpHandler {
      */
     private MockResponse generateJarExtensionResponse(MockContext context, ResponseConfig config) {
         try {
-            // 加载JAR（如果尚未加载）
+            // 检查JAR配置是否有效
+            String jarPath = config.getJarPath();
+            String handlerClassName = config.getHandlerClassName();
+            
+            if (jarPath == null || jarPath.trim().isEmpty()) {
+                return MockResponse.error("JAR extension configuration error: JAR file path is not configured");
+            }
+            if (handlerClassName == null || handlerClassName.trim().isEmpty()) {
+                return MockResponse.error("JAR extension configuration error: Handler class name is not configured");
+            }
+            
+            // 检查JAR文件是否存在
+            java.io.File jarFile = new java.io.File(jarPath);
+            if (!jarFile.exists()) {
+                return MockResponse.error("JAR extension configuration error: JAR file not found: " + jarPath);
+            }
+            
+            // 加载JAR（如果尚未加载或JAR路径已更改）
             if (!jarExtensionHandler.isLoaded() ||
-                !config.getJarPath().equals(jarExtensionHandler.getJarPath())) {
-                boolean loaded = jarExtensionHandler.loadJar(
-                    config.getJarPath(),
-                    config.getHandlerClassName()
-                );
+                !jarPath.equals(jarExtensionHandler.getJarPath())) {
+                boolean loaded = jarExtensionHandler.loadJar(jarPath, handlerClassName);
                 if (!loaded) {
-                    return MockResponse.error("Failed to load JAR extension");
+                    return MockResponse.error("Failed to load JAR extension: " + jarPath + 
+                        " (Handler: " + handlerClassName + "). " +
+                        "Please check: 1) Class implements IMockHandler interface, " +
+                        "2) Class has a public no-arg constructor");
                 }
             }
 

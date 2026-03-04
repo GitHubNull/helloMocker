@@ -321,6 +321,7 @@ public class ResponseConfigPanel extends JPanel {
 
     private JPanel createJarExtensionPanel() {
         jarExtensionPanel = new JarExtensionPanel();
+        jarExtensionPanel.setApi(api);
         return jarExtensionPanel;
     }
 

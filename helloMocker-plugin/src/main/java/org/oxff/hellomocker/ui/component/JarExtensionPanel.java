@@ -1,5 +1,6 @@
 package org.oxff.hellomocker.ui.component;
 
+import burp.api.montoya.MontoyaApi;
 import org.oxff.hellomocker.handler.JarExtensionHandler;
 import org.oxff.hellomocker.model.ResponseConfig;
 
@@ -25,9 +26,17 @@ public class JarExtensionPanel extends JPanel {
     private JTextArea infoArea;
 
     private JarExtensionHandler handler;
+    private MontoyaApi api;
 
     public JarExtensionPanel() {
         initializeUI();
+    }
+
+    /**
+     * 设置 MontoyaApi（用于创建 JarExtensionHandler）
+     */
+    public void setApi(MontoyaApi api) {
+        this.api = api;
     }
 
     private void initializeUI() {
@@ -140,11 +149,73 @@ public class JarExtensionPanel extends JPanel {
     }
 
     private void loadJar() {
-        // This will be implemented when integrated with MontoyaApi
-        JOptionPane.showMessageDialog(this,
-                "JAR loading will be available when the handler is integrated.",
-                "Info",
-                JOptionPane.INFORMATION_MESSAGE);
+        String jarPath = jarPathField.getText().trim();
+        String handlerClassName = handlerClassField.getText().trim();
+
+        // 验证输入
+        if (jarPath.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Please enter the JAR file path.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (handlerClassName.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Please enter the handler class name.",
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // 检查文件是否存在
+        File jarFile = new File(jarPath);
+        if (!jarFile.exists()) {
+            JOptionPane.showMessageDialog(this,
+                    "JAR file not found: " + jarPath,
+                    "File Not Found",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 检查 API 是否可用
+        if (api == null) {
+            JOptionPane.showMessageDialog(this,
+                    "API not available. JAR will be loaded automatically when a matching request arrives.",
+                    "Info",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // 创建或重用 handler
+        if (handler == null) {
+            handler = new JarExtensionHandler(api);
+        }
+
+        // 尝试加载 JAR
+        boolean loaded = handler.loadJar(jarPath, handlerClassName);
+
+        if (loaded) {
+            updateStatus();
+            JOptionPane.showMessageDialog(this,
+                    "JAR loaded successfully!\n\n" +
+                    "Handler: " + handler.getHandlerName() + "\n" +
+                    "Description: " + handler.getHandlerDescription(),
+                    "Load Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            handler = null;
+            updateStatus();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to load JAR extension.\n\n" +
+                    "Please check:\n" +
+                    "1. Class name is fully qualified (e.g., com.example.MyHandler)\n" +
+                    "2. Class implements IMockHandler interface\n" +
+                    "3. Class has a public no-arg constructor",
+                    "Load Failed",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void unloadJar() {
