@@ -247,20 +247,6 @@ jobs:
         with:
           fetch-depth: 0  # 获取完整历史用于changelog生成
 
-      - name: Delete existing release if exists
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG_NAME="${{ github.ref_name }}"
-          # 查找并删除已存在的release
-          RELEASE_ID=$(gh release view "$TAG_NAME" --json id -q '.id' 2>/dev/null || echo "")
-          if [ -n "$RELEASE_ID" ]; then
-            echo "Deleting existing release with ID: $RELEASE_ID"
-            gh release delete "$TAG_NAME" --yes
-          else
-            echo "No existing release found for tag: $TAG_NAME"
-          fi
-
       - name: Download artifacts
         uses: actions/download-artifact@v5
         with:
@@ -357,5 +343,6 @@ jobs:
             release/examples-source-*.zip
           generate_release_notes: false
           fail_on_unmatched_files: false
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
