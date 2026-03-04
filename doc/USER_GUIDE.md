@@ -71,10 +71,11 @@ git clone https://github.com/GitHubNull/helloMocker.git
 # 进入项目目录
 cd helloMocker
 
-# 构建 JAR 包
-mvn clean package -DskipTests
+# 构建项目（多模块 Maven 项目）
+mvn clean install -DskipTests
 
-# 构建完成后，JAR 文件位于 target/helloMocker-1.0.0.jar
+# 构建完成后，插件 JAR 文件位于 helloMocker-plugin/target/helloMocker-plugin-1.0.0.jar
+# API JAR 文件位于 helloMocker-api/target/helloMocker-api-1.0.0.jar
 ```
 
 ### 验证安装

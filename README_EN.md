@@ -68,7 +68,7 @@ HelloMocker is a powerful BurpSuite HTTP Mock extension that supports dynamic re
    - Open BurpSuite
    - Go to `Extensions` → `Installed`
    - Click the `Add` button
-   - Select the downloaded `helloMocker-1.0.0.jar` file
+   - Select the downloaded `helloMocker-plugin-1.0.0.jar` file
 
 3. **Configure Python Path**
    - Switch to the `HelloMocker` → `Settings` tab
@@ -177,22 +177,40 @@ The following options can be configured in the `Settings` tab:
 ## 📁 Project Structure
 
 ```
-helloMocker/
-├── src/main/java/org/oxff/hellomocker/
-│   ├── HelloMockerExtension.java      # Plugin entry point
-│   ├── api/                            # API interfaces
-│   ├── engine/                         # Python script engine
-│   ├── handler/                        # Response handlers
-│   ├── http/                           # HTTP handlers
-│   ├── menu/                           # Context menus
-│   ├── model/                          # Data models
-│   ├── service/                        # Business logic
-│   ├── storage/                        # Data storage
-│   ├── ui/                             # UI components
-│   └── util/                           # Utility classes
-├── doc/                                # Documentation
-├── target/                             # Build output
-└── pom.xml                             # Maven configuration
+helloMocker/                                    # Main Project (Multi-Module Maven)
+├── pom.xml                                     # Parent POM (Multi-Module Configuration)
+├── helloMocker-api/                            # API Module (for users to depend on)
+│   ├── pom.xml
+│   └── src/main/java/org/oxff/hellomocker/api/
+│       └── IMockHandler.java                   # JAR Extension Interface
+├── helloMocker-plugin/                         # Plugin Module (Burp Extension Main)
+│   ├── pom.xml
+│   └── src/main/java/org/oxff/hellomocker/
+│       ├── HelloMockerExtension.java           # Plugin Entry Point
+│       ├── handler/                            # Response Handlers
+│       ├── http/                               # HTTP Handlers
+│       ├── menu/                               # Context Menus
+│       ├── model/                              # Data Models
+│       ├── service/                            # Business Logic
+│       ├── storage/                            # Data Storage
+│       ├── ui/                                 # UI Components
+│       └── util/                               # Utility Classes
+├── examples/                                   # Example Projects
+│   ├── helloMocker-api-example/                # API Usage Example (Spring Boot)
+│   │   ├── pom.xml
+│   │   ├── README.md
+│   │   └── src/main/java/com/example/
+│   │       └── ExampleHandler.java             # Example Handler
+│   └── jar-extension/                          # JAR Extension Example
+│       ├── pom.xml
+│       ├── README.md                           # Detailed Development Guide
+│       └── src/main/java/com/example/
+│           └── ExampleHandler.java             # Example Handler
+├── doc/                                        # Documentation
+│   ├── USER_GUIDE.md                           # User Guide (Chinese)
+│   └── USER_GUIDE_EN.md                        # User Guide (English)
+├── README.md                                   # This Document (Chinese)
+└── README_EN.md                                # This Document (English)
 ```
 
 ## 🤝 Contributing

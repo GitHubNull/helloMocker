@@ -56,14 +56,16 @@ jobs:
           fi
 
   build:
-    name: Build JAR
+    name: Build All Artifacts
     runs-on: ubuntu-latest
     needs: validate-version
     if: needs.validate-version.outputs.valid == 'true'
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # 获取完整历史用于changelog生成
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -85,7 +87,7 @@ jobs:
           echo "Tag version: $TAG_VERSION"
           echo "POM version: $POM_VERSION"
           
-          # 如果版本不一致，自动更新pom.xml版本
+          # 如果版本不一致，自动更新pom.xml版本（使用Maven插件确保正确更新）
           if [[ "$POM_VERSION" != "$TAG_VERSION" ]]; then
             echo "Updating pom.xml version from $POM_VERSION to $TAG_VERSION"
             mvn versions:set -DnewVersion=$TAG_VERSION -DgenerateBackupPoms=false
@@ -93,35 +95,114 @@ jobs:
             echo "Version already matches, no update needed"
           fi
 
-      - name: Build with Maven
+      # ============================================
+      # 1. 构建主项目 (helloMocker-api 和 helloMocker-plugin)
+      # ============================================
+      - name: Build main project with Maven
         run: mvn clean package -DskipTests
 
       - name: Run tests
         run: mvn test
 
-      - name: Rename JAR for release
+      - name: Install to local repository
+        run: mvn install -DskipTests
+
+      # ============================================
+      # 2. 构建示例项目
+      # ============================================
+      - name: Update example projects version
+        run: |
+          TAG_VERSION="${{ needs.validate-version.outputs.version }}"
+          
+          # 使用xmlstarlet或更精确的sed来更新版本号
+          # 只更新 helloMocker.version 属性，不影响其他version标签
+          
+          # 更新 helloMocker-api-example
+          sed -i "s|<helloMocker.version>[^<]*</helloMocker.version>|<helloMocker.version>${TAG_VERSION}</helloMocker.version>|g" examples/helloMocker-api-example/pom.xml
+          # 更新项目自身版本（第一个出现的<version>标签在<artifactId>之后）
+          sed -i "0,/<artifactId>helloMocker-api-example<\/artifactId>/{ n; s|<version>[^<]*</version>|<version>${TAG_VERSION}</version>|; }" examples/helloMocker-api-example/pom.xml
+          
+          # 更新 jar-extension
+          sed -i "s|<helloMocker.version>[^<]*</helloMocker.version>|<helloMocker.version>${TAG_VERSION}</helloMocker.version>|g" examples/jar-extension/pom.xml
+          # 更新项目自身版本
+          sed -i "0,/<artifactId>helloMocker-example-handler<\/artifactId>/{ n; s|<version>[^<]*</version>|<version>${TAG_VERSION}</version>|; }" examples/jar-extension/pom.xml
+          
+          echo "Updated example project versions to ${TAG_VERSION}"
+
+      - name: Build helloMocker-api-example
+        run: |
+          cd examples/helloMocker-api-example
+          mvn clean package -DskipTests
+
+      - name: Build jar-extension example
+        run: |
+          cd examples/jar-extension
+          mvn clean package -DskipTests
+
+      # ============================================
+      # 3. 准备发布产物
+      # ============================================
+      - name: Prepare release artifacts
         run: |
           VERSION="${{ needs.validate-version.outputs.version }}"
-          SOURCE_JAR="target/helloMocker-${VERSION}.jar"
           
-          # 检查JAR文件是否存在
-          if [ -f "$SOURCE_JAR" ]; then
-            echo "JAR already has correct name: $SOURCE_JAR"
-          else
-            # 如果文件名不同，尝试重命名
-            echo "Looking for JAR file to rename..."
-            ACTUAL_JAR=$(ls target/helloMocker-*.jar | head -1)
-            if [ -n "$ACTUAL_JAR" ] && [ "$ACTUAL_JAR" != "$SOURCE_JAR" ]; then
-              mv "$ACTUAL_JAR" "$SOURCE_JAR"
-              echo "Renamed $ACTUAL_JAR to $SOURCE_JAR"
-            fi
+          # 创建发布目录
+          mkdir -p release
+          
+          # 复制主插件JAR
+          cp helloMocker-plugin/target/helloMocker-*.jar release/ 2>/dev/null || echo "Warning: Main plugin JAR not found"
+          
+          # 复制API JAR
+          cp helloMocker-api/target/helloMocker-api-*.jar release/ 2>/dev/null || echo "Warning: API JAR not found"
+          
+          # 复制示例项目JAR
+          cp examples/helloMocker-api-example/target/helloMocker-api-example-*.jar release/ 2>/dev/null || echo "Warning: API example JAR not found"
+          cp examples/jar-extension/target/helloMocker-example-handler-*.jar release/ 2>/dev/null || echo "Warning: Example handler JAR not found"
+          
+          # 验证至少有一个文件
+          if [ -z "$(ls -A release/)" ]; then
+            echo "Error: No artifacts found in release directory"
+            exit 1
           fi
+          
+          # 列出发布目录内容
+          echo "Release artifacts:"
+          ls -la release/
 
-      - name: Upload artifact
+      # ============================================
+      # 4. 打包示例项目源码
+      # ============================================
+      - name: Package example source code
+        run: |
+          VERSION="${{ needs.validate-version.outputs.version }}"
+          
+          # 创建临时目录用于打包
+          mkdir -p temp-examples/helloMocker-api-example
+          mkdir -p temp-examples/jar-extension
+          
+          # 复制 helloMocker-api-example 源码 (排除target目录)
+          rsync -av --exclude='target' examples/helloMocker-api-example/ temp-examples/helloMocker-api-example/
+          
+          # 复制 jar-extension 源码 (排除target目录)
+          rsync -av --exclude='target' examples/jar-extension/ temp-examples/jar-extension/
+          
+          # 打包所有示例源码到一个zip文件
+          cd temp-examples
+          zip -r "../release/examples-source-${VERSION}.zip" .
+          cd ..
+          
+          # 清理临时目录
+          rm -rf temp-examples
+          
+          echo "Source packages created:"
+          ls -la release/*.zip
+
+      - name: Upload all artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: helloMocker-jar
-          path: target/helloMocker-*.jar
+          name: helloMocker-release
+          path: release/
+          retention-days: 5
 
   release:
     name: Create Release
@@ -131,13 +212,20 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/checkout@v5
         with:
-          name: helloMocker-jar
+          fetch-depth: 0  # 获取完整历史用于changelog生成
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: helloMocker-release
           path: ./release
+
+      - name: List release artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          ls -la release/
 
       - name: Generate changelog
         id: changelog
@@ -146,25 +234,59 @@ jobs:
           # 获取上一个tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           
-          echo "## Changes" > CHANGELOG.md
+          # 创建CHANGELOG文件（不使用heredoc避免缩进问题）
+          echo "## Release Contents" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "This release includes:" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Main Plugin" >> CHANGELOG.md
+          echo "- \`helloMocker-${VERSION}.jar\` - BurpSuite HTTP Mock Plugin (fat JAR with all dependencies)" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### API Library" >> CHANGELOG.md
+          echo "- \`helloMocker-api-${VERSION}.jar\` - HelloMocker API for developing custom extensions" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Example Extensions (Compiled JAR)" >> CHANGELOG.md
+          echo "- \`helloMocker-api-example-${VERSION}.jar\` - Complete API usage example" >> CHANGELOG.md
+          echo "- \`helloMocker-example-handler-${VERSION}.jar\` - Simple JAR extension example" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Example Source Code" >> CHANGELOG.md
+          echo "- \`examples-source-${VERSION}.zip\` - Source code of all example projects" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "---" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## Changes" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           
           if [ -n "$PREV_TAG" ]; then
             echo "### Commits since $PREV_TAG" >> CHANGELOG.md
             echo "" >> CHANGELOG.md
-            git log $PREV_TAG..HEAD --pretty=format:"- %s (%h)" >> CHANGELOG.md
+            git log "$PREV_TAG"..HEAD --pretty=format:"- %s (%h)" >> CHANGELOG.md || echo "- Initial release" >> CHANGELOG.md
           else
             echo "### Initial Release" >> CHANGELOG.md
-            git log --pretty=format:"- %s (%h)" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            git log --pretty=format:"- %s (%h)" -20 >> CHANGELOG.md || echo "- Initial release" >> CHANGELOG.md
           fi
           
           echo "" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
-          echo "### Installation" >> CHANGELOG.md
+          echo "---" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
+          echo "## Installation" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Main Plugin" >> CHANGELOG.md
           echo "1. Download \`helloMocker-${VERSION}.jar\`" >> CHANGELOG.md
-          echo "2. In Burp Suite, go to **Extender** > **Extensions** > **Add**" >> CHANGELOG.md
+          echo "2. In Burp Suite, go to **Extensions** > **Installed** > **Add**" >> CHANGELOG.md
           echo "3. Select the downloaded JAR file" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Using Example Extensions" >> CHANGELOG.md
+          echo "1. First install the main plugin" >> CHANGELOG.md
+          echo "2. Download the example JAR (e.g., \`helloMocker-example-handler-${VERSION}.jar\`)" >> CHANGELOG.md
+          echo "3. In HelloMocker plugin, add the JAR as an extension handler" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "### Developing Custom Extensions" >> CHANGELOG.md
+          echo "1. Add \`helloMocker-api-${VERSION}.jar\` as a dependency to your project" >> CHANGELOG.md
+          echo "2. Implement the \`IMockHandler\` interface" >> CHANGELOG.md
+          echo "3. See example source code for reference" >> CHANGELOG.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -175,6 +297,11 @@ jobs:
           prerelease: false
           files: |
             release/helloMocker-*.jar
+            release/helloMocker-api-*.jar
+            release/helloMocker-api-example-*.jar
+            release/helloMocker-example-handler-*.jar
+            release/examples-source-*.zip
           generate_release_notes: false
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

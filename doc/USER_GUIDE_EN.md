@@ -71,10 +71,11 @@ git clone https://github.com/GitHubNull/helloMocker.git
 # Enter the project directory
 cd helloMocker
 
-# Build the JAR package
-mvn clean package -DskipTests
+# Build the project (multi-module Maven project)
+mvn clean install -DskipTests
 
-# After building, the JAR file is located at target/helloMocker-1.0.0.jar
+# After building, the plugin JAR is located at helloMocker-plugin/target/helloMocker-plugin-1.0.0.jar
+# The API JAR is located at helloMocker-api/target/helloMocker-api-1.0.0.jar
 ```
 
 ### Verifying Installation

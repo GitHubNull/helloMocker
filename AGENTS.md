@@ -2,6 +2,31 @@
 
 Coding agent instructions for the helloMocker BurpSuite HTTP Mock plugin project.
 
+## Project Structure
+
+This is a **multi-module Maven project** with the following structure:
+
+```
+helloMocker/
+├── pom.xml                              # Parent POM (manages all modules)
+├── helloMocker-api/                     # API module (IMockHandler interface)
+│   ├── pom.xml
+│   └── src/main/java/org/oxff/hellomocker/api/
+│       └── IMockHandler.java
+├── helloMocker-plugin/                  # Plugin module (Burp extension)
+│   ├── pom.xml
+│   └── src/                             # All plugin source code
+└── examples/
+    ├── helloMocker-api-example/         # Spring Boot example
+    └── jar-extension/                   # JAR extension example
+```
+
+### Module Descriptions
+
+- **helloMocker-api**: Contains the `IMockHandler` interface for JAR extensions. This is a separate module so users can depend on it without pulling in all plugin dependencies.
+- **helloMocker-plugin**: The main BurpSuite extension module. Contains all the plugin code.
+- **examples/**: Contains example projects demonstrating how to use the API and create JAR extensions.
+
 ## Build Commands
 
 ```bash

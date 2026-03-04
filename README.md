@@ -68,7 +68,7 @@ HelloMocker 是一款功能强大的 BurpSuite HTTP Mock 插件，支持通过 P
    - 打开 BurpSuite
    - 进入 `Extensions` → `Installed`
    - 点击 `Add` 按钮
-   - 选择下载的 `helloMocker-1.0.0.jar` 文件
+   - 选择下载的 `helloMocker-plugin-1.0.0.jar` 文件
 
 3. **配置 Python 路径**
    - 切换到 `HelloMocker` → `Settings` Tab
@@ -196,6 +196,11 @@ helloMocker/                                    # 主项目（Maven 多模块）
 │       ├── ui/                                 # 界面组件
 │       └── util/                               # 工具类
 ├── examples/                                   # 示例项目
+│   ├── helloMocker-api-example/                # API 使用示例（Spring Boot）
+│   │   ├── pom.xml
+│   │   ├── README.md
+│   │   └── src/main/java/com/example/
+│   │       └── ExampleHandler.java             # 示例处理器
 │   └── jar-extension/                          # JAR 扩展示例
 │       ├── pom.xml
 │       ├── README.md                           # 详细开发指南
