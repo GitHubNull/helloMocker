@@ -269,11 +269,127 @@ Suitable for scenarios requiring Java code to process requests.
 - Team collaboration on Mock handlers
 
 **Development Steps**:
-1. Create a Maven/Gradle project
-2. Add dependencies (Burp Montoya API and plugin API)
-3. Implement the `IMockHandler` interface
-4. Package as a JAR file
-5. Configure JAR path and class name in the plugin
+
+#### Method 1: Using Maven (Recommended)
+
+1. **Create Maven Project**
+   - In IDEA, select **File → New → Project → Maven**
+   - Set JDK to Java 17
+
+2. **Add Dependencies to pom.xml**
+
+```xml
+<dependencies>
+    <!-- HelloMocker API -->
+    <dependency>
+        <groupId>oxff.org</groupId>
+        <artifactId>helloMocker-api</artifactId>
+        <version>1.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+    
+    <!-- BurpSuite Montoya API -->
+    <dependency>
+        <groupId>net.portswigger.burp.extensions</groupId>
+        <artifactId>montoya-api</artifactId>
+        <version>2023.10.2</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+
+<properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+</properties>
+```
+
+3. **Install API to Local Maven Repository**
+
+Before adding dependencies, you need to install helloMocker-api to your local Maven repository:
+
+```bash
+# Clone HelloMocker repository
+git clone https://github.com/GitHubNull/helloMocker.git
+cd helloMocker
+
+# Install API module to local repository
+mvn clean install -pl helloMocker-api
+```
+
+4. **Implement IMockHandler Interface**
+
+```java
+package com.example;
+
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
+import org.oxff.hellomocker.api.IMockHandler;
+
+public class MyHandler implements IMockHandler {
+    
+    @Override
+    public HttpResponse handleRequest(HttpRequest request) {
+        String body = "{\"message\": \"Hello from JAR\"}";
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: application/json\r\n\r\n" +
+                body;
+        return HttpResponse.httpResponse(response);
+    }
+}
+```
+
+5. **Package JAR**
+
+```bash
+mvn clean package
+```
+
+#### Method 2: Add JAR Directly in IDE
+
+If you don't want to use Maven, you can manually add JAR dependencies:
+
+**In IntelliJ IDEA:**
+
+1. **Download JAR Files**
+   - Download `helloMocker-api-1.0.0.jar` from [Releases](https://github.com/GitHubNull/helloMocker/releases)
+   - Download `montoya-api-2023.10.2.jar` from [Maven Central](https://repo1.maven.org/maven2/net/portswigger/burp/extensions/montoya-api/)
+
+2. **Add Dependency JARs**
+   - Open **File → Project Structure** (or press `Ctrl+Alt+Shift+S`)
+   - Select **Modules** → your module → **Dependencies** tab
+   - Click **+** button → **JARs or Directories...**
+   - Select the downloaded `helloMocker-api-1.0.0.jar` and `montoya-api-2023.10.2.jar`
+   - Click **OK** to confirm
+
+3. **Set Build Output**
+   - In **Project Structure**, select **Artifacts**
+   - Click **+** → **JAR** → **From modules with dependencies...**
+   - Select your main class (or handler class if no main method)
+   - Ensure **extract to the target JAR** is selected
+   - Click **OK**
+
+4. **Build JAR**
+   - Select **Build → Build Artifacts...**
+   - Select your Artifact → **Build**
+   - Generated JAR is located in `out/artifacts/...` directory
+
+**In Eclipse:**
+
+1. **Download JAR Files** (same as above)
+
+2. **Add Dependency JARs**
+   - Right-click project → **Properties**
+   - Select **Java Build Path** → **Libraries** tab
+   - Click **Add External JARs...**
+   - Select the downloaded JAR files
+   - Click **Apply and Close**
+
+3. **Export JAR**
+   - Right-click project → **Export...**
+   - Select **Java → JAR file**
+   - Select resources to export
+   - Specify export path, click **Finish**
 
 **Important Notes**:
 - **Class name must be complete**: Use the fully qualified class name (including package), e.g., `com.example.MyHandler`, not just `MyHandler`

@@ -269,11 +269,129 @@ HelloMocker 插件主界面分为三个标签页：
 - 团队协作开发 Mock 处理器
 
 **开发步骤**：
-1. 创建 Maven/Gradle 项目
-2. 添加依赖（Burp Montoya API 和插件 API）
-3. 实现 `IMockHandler` 接口
-4. 打包为 JAR 文件
-5. 在插件中配置 JAR 路径和类名
+
+#### 方式一：使用 Maven（推荐）
+
+1. **创建 Maven 项目**
+   - 在 IDEA 中选择 **File → New → Project → Maven**
+   - 设置 JDK 为 Java 17
+
+2. **添加依赖到 pom.xml**
+
+```xml
+<dependencies>
+    <!-- HelloMocker API -->
+    <dependency>
+        <groupId>oxff.org</groupId>
+        <artifactId>helloMocker-api</artifactId>
+        <version>1.0.0</version>
+        <scope>provided</scope>
+    </dependency>
+    
+    <!-- BurpSuite Montoya API -->
+    <dependency>
+        <groupId>net.portswigger.burp.extensions</groupId>
+        <artifactId>montoya-api</artifactId>
+        <version>2023.10.2</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+
+<properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+</properties>
+```
+
+3. **安装 API 到本地 Maven 仓库**
+
+在添加依赖之前，需要先将 helloMocker-api 安装到本地 Maven 仓库：
+
+```bash
+# 克隆 HelloMocker 仓库
+git clone https://github.com/GitHubNull/helloMocker.git
+cd helloMocker
+
+# 安装 API 模块到本地仓库
+mvn clean install -pl helloMocker-api
+```
+
+4. **实现 IMockHandler 接口**
+
+```java
+package com.example;
+
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
+import org.oxff.hellomocker.api.IMockHandler;
+
+public class MyHandler implements IMockHandler {
+    
+    @Override
+    public HttpResponse handleRequest(HttpRequest request) {
+        String body = "{\"message\": \"Hello from JAR\"}";
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: application/json\r\n\r\n" +
+                body;
+        return HttpResponse.httpResponse(response);
+    }
+}
+```
+
+5. **打包 JAR**
+
+```bash
+mvn clean package
+```
+
+#### 方式二：使用 IDE 直接添加 JAR
+
+如果不想使用 Maven，也可以手动添加 JAR 依赖：
+
+**在 IntelliJ IDEA 中：**
+
+1. **下载 JAR 文件**
+   - 从 [Releases](https://github.com/GitHubNull/helloMocker/releases) 下载 `helloMocker-api-1.0.0.jar`
+   - 从 [Maven Central](https://repo1.maven.org/maven2/net/portswigger/burp/extensions/montoya-api/) 下载 `montoya-api-2023.10.2.jar`
+
+2. **添加依赖 JAR**
+   - 打开 **File → Project Structure**（或按 `Ctrl+Alt+Shift+S`）
+   - 选择 **Modules** → 你的模块 → **Dependencies** 标签
+   - 点击 **+** 按钮 → **JARs or Directories...**
+   - 选择下载的 `helloMocker-api-1.0.0.jar` 和 `montoya-api-2023.10.2.jar`
+   - 点击 **OK** 确认
+
+   ![添加 JAR 依赖示意图](/doc/images/add-jar-dependency.png)
+
+3. **设置编译输出**
+   - 在 **Project Structure** 中选择 **Artifacts**
+   - 点击 **+** → **JAR** → **From modules with dependencies...**
+   - 选择你的主类（包含 `main` 方法的类，如果没有则选择处理器类）
+   - 确保 **extract to the target JAR** 被选中
+   - 点击 **OK**
+
+4. **构建 JAR**
+   - 选择 **Build → Build Artifacts...**
+   - 选择你的 Artifact → **Build**
+   - 生成的 JAR 位于 `out/artifacts/...` 目录
+
+**在 Eclipse 中：**
+
+1. **下载 JAR 文件**（同上）
+
+2. **添加依赖 JAR**
+   - 右键点击项目 → **Properties**
+   - 选择 **Java Build Path** → **Libraries** 标签
+   - 点击 **Add External JARs...**
+   - 选择下载的 JAR 文件
+   - 点击 **Apply and Close**
+
+3. **导出 JAR**
+   - 右键点击项目 → **Export...**
+   - 选择 **Java → JAR file**
+   - 选择要导出的资源
+   - 指定导出路径，点击 **Finish**
 
 **注意事项**：
 - **类名必须完整**：使用完整的类全限定名（包含包名），如 `com.example.MyHandler`，不能只写 `MyHandler`
