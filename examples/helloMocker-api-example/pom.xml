@@ -24,7 +24,7 @@
         <!-- HelloMocker API - 从本地仓库依赖 -->
         <dependency>
             <groupId>oxff.org</groupId>
-            <artifactId>helloMocker</artifactId>
+            <artifactId>helloMocker-api</artifactId>
             <version>${helloMocker.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -68,7 +68,7 @@
                             <!-- 排除provided依赖，这些由运行时环境提供 -->
                             <artifactSet>
                                 <excludes>
-                                    <exclude>oxff.org:helloMocker</exclude>
+                                    <exclude>oxff.org:helloMocker-api</exclude>
                                     <exclude>net.portswigger.burp.extensions:montoya-api</exclude>
                                 </excludes>
                             </artifactSet>
