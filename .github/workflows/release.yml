@@ -3,9 +3,17 @@ name: Build and Release
 on:
   push:
     tags:
-      # 匹配包含release关键字的tag，版本号符合语义化版本规范
+      # 匹配正式发布版本 (包含release关键字)
       # 例如: v1.0.0-release, release-v1.2.3, 1.0.0-release 等
       - '*release*'
+      # 匹配预发布版本 (alpha, beta, rc)
+      # 例如: v1.0.0-alpha, v1.0.0-beta.1, v1.0.0-rc.1 等
+      - 'v*.*.*-alpha*'
+      - 'v*.*.*-beta*'
+      - 'v*.*.*-rc*'
+      - '*.*.*-alpha*'
+      - '*.*.*-beta*'
+      - '*.*.*-rc*'
 
 permissions:
   contents: write
@@ -16,7 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.validate.outputs.version }}
+      full_version: ${{ steps.validate.outputs.full_version }}
       valid: ${{ steps.validate.outputs.valid }}
+      prerelease: ${{ steps.validate.outputs.prerelease }}
     
     steps:
       - name: Validate version tag
@@ -30,25 +40,44 @@ jobs:
           # 格式2: release-v1.0.0 -> 1.0.0
           # 格式3: 1.0.0-release -> 1.0.0
           # 格式4: release-1.0.0 -> 1.0.0
+          # 格式5: v1.0.0-alpha.1 -> 1.0.0-alpha.1 (预发布)
+          # 格式6: v1.0.0-beta -> 1.0.0-beta (预发布)
+          # 格式7: v1.0.0-rc.1 -> 1.0.0-rc.1 (预发布)
           
           VERSION=""
+          FULL_VERSION=""
+          PRERELEASE="false"
           
-          # 尝试匹配 v开头的版本号
-          if [[ "$TAG" =~ v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+          # 尝试匹配预发布版本 (alpha, beta, rc)
+          if [[ "$TAG" =~ v?([0-9]+\.[0-9]+\.[0-9]+)-(alpha|beta|rc)([.0-9]*) ]]; then
             VERSION="${BASH_REMATCH[1]}"
+            PRERELEASE_TYPE="${BASH_REMATCH[2]}"
+            PRERELEASE_NUM="${BASH_REMATCH[3]}"
+            FULL_VERSION="${VERSION}-${PRERELEASE_TYPE}${PRERELEASE_NUM}"
+            PRERELEASE="true"
+            echo "Detected prerelease version: $FULL_VERSION"
+          # 尝试匹配 v开头的正式版本号
+          elif [[ "$TAG" =~ v([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            FULL_VERSION="$VERSION"
           # 尝试匹配纯数字版本号
           elif [[ "$TAG" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]]; then
             VERSION="${BASH_REMATCH[1]}"
+            FULL_VERSION="$VERSION"
           fi
           
-          echo "Extracted version: $VERSION"
+          echo "Extracted base version: $VERSION"
+          echo "Full version: $FULL_VERSION"
+          echo "Is prerelease: $PRERELEASE"
           
           # 验证版本号是否符合语义化版本规范 (SemVer)
           # 格式: MAJOR.MINOR.PATCH (如 1.0.0, 2.1.3)
           if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Valid semantic version: $VERSION"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
             echo "valid=true" >> $GITHUB_OUTPUT
+            echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
           else
             echo "Invalid version format. Expected semantic version (e.g., 1.0.0)"
             echo "valid=false" >> $GITHUB_OUTPUT
@@ -82,7 +111,7 @@ jobs:
 
       - name: Update pom.xml version to match tag
         run: |
-          TAG_VERSION="${{ needs.validate-version.outputs.version }}"
+          TAG_VERSION="${{ needs.validate-version.outputs.full_version }}"
           POM_VERSION="${{ steps.pom_version.outputs.version }}"
           echo "Tag version: $TAG_VERSION"
           echo "POM version: $POM_VERSION"
@@ -112,7 +141,7 @@ jobs:
       # ============================================
       - name: Update example projects version
         run: |
-          TAG_VERSION="${{ needs.validate-version.outputs.version }}"
+          TAG_VERSION="${{ needs.validate-version.outputs.full_version }}"
           
           # 使用xmlstarlet或更精确的sed来更新版本号
           # 只更新 helloMocker.version 属性，不影响其他version标签
@@ -144,7 +173,7 @@ jobs:
       # ============================================
       - name: Prepare release artifacts
         run: |
-          VERSION="${{ needs.validate-version.outputs.version }}"
+          VERSION="${{ needs.validate-version.outputs.full_version }}"
           
           # 创建发布目录
           mkdir -p release
@@ -174,7 +203,7 @@ jobs:
       # ============================================
       - name: Package example source code
         run: |
-          VERSION="${{ needs.validate-version.outputs.version }}"
+          VERSION="${{ needs.validate-version.outputs.full_version }}"
           
           # 创建临时目录用于打包
           mkdir -p temp-examples/helloMocker-api-example
@@ -230,13 +259,21 @@ jobs:
       - name: Generate changelog
         id: changelog
         run: |
-          VERSION="${{ needs.validate-version.outputs.version }}"
+          VERSION="${{ needs.validate-version.outputs.full_version }}"
+          PRERELEASE="${{ needs.validate-version.outputs.prerelease }}"
           # 获取上一个tag
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           
           # 创建CHANGELOG文件（不使用heredoc避免缩进问题）
           echo "## Release Contents" > CHANGELOG.md
           echo "" >> CHANGELOG.md
+          
+          # 预发布版本提示
+          if [ "$PRERELEASE" = "true" ]; then
+            echo "> **Warning**: This is a pre-release version. It may contain bugs and is not recommended for production use." >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+          fi
+          
           echo "This release includes:" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
           echo "### Main Plugin" >> CHANGELOG.md
@@ -291,10 +328,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: HelloMocker v${{ needs.validate-version.outputs.version }}
+          name: HelloMocker v${{ needs.validate-version.outputs.full_version }}
           body_path: CHANGELOG.md
           draft: false
-          prerelease: false
+          prerelease: ${{ needs.validate-version.outputs.prerelease == 'true' }}
           files: |
             release/helloMocker-*.jar
             release/helloMocker-api-*.jar
