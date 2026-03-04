@@ -157,11 +157,12 @@ The rule editor is divided into three sections:
 
 #### Response Configuration
 
-Choose one of three response types:
+Choose one of four response types:
 
 1. **Static Response**: Return configured status code, headers, and body directly
 2. **Python Script**: Execute Python file to generate response dynamically
 3. **Proxy Forward**: Forward the request to an upstream server
+4. **JAR Extension**: Load custom JAR package to handle requests (Stage 6)
 
 ---
 
@@ -227,6 +228,91 @@ Useful for forwarding requests to other servers for processing.
 - Forward requests to a local development server
 - Use external services (like Flask/Django) to handle requests
 - Implement complex Mock logic without modifying the extension
+
+### 4. JAR Extension
+
+Suitable for scenarios requiring Java code to process requests (P2 feature).
+
+**Configuration Items**:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| JAR File | Path to the JAR package containing the handler | `/path/to/myhandler.jar` |
+| Handler Class | Fully qualified class name implementing IMockHandler | `com.example.MyHandler` |
+
+**How It Works**:
+1. The extension uses URLClassLoader to dynamically load the JAR file
+2. Creates handler instance via reflection (must implement IMockHandler interface)
+3. Calls the handler's `handleRequest()` method to process the request
+4. Returns the response from the handler to the client
+
+**Use Cases**:
+- Complex business logic requiring Java code
+- Reusing existing Java libraries or frameworks
+- Better performance and type safety
+- Team collaboration on Mock handlers
+
+**Development Steps**:
+1. Create a Maven/Gradle project
+2. Add dependencies (Burp Montoya API and plugin API)
+3. Implement the `IMockHandler` interface
+4. Package as a JAR file
+5. Configure JAR path and class name in the plugin
+
+**Example Handler Code**:
+
+```java
+package com.example;
+
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
+import org.oxff.hellomocker.api.IMockHandler;
+
+public class MyHandler implements IMockHandler {
+    
+    @Override
+    public HttpResponse handleRequest(HttpRequest request) {
+        // Get request information
+        String url = request.url();
+        String method = request.method();
+        
+        // Custom processing logic
+        String body = String.format(
+            "{\"url\": \"%s\", \"method\": \"%s\", \"handled_by\": \"JAR\"}",
+            url, method
+        );
+        
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: application/json\r\n\r\n" +
+                body;
+        
+        return HttpResponse.httpResponse(response);
+    }
+    
+    @Override
+    public String getName() {
+        return "My Custom Handler";
+    }
+    
+    @Override
+    public void init() {
+        // Initialization, e.g., load configuration
+    }
+    
+    @Override
+    public void destroy() {
+        // Cleanup operations
+    }
+}
+```
+
+**Interface Documentation**:
+
+- `handleRequest(HttpRequest request)`: Core method to process HTTP request and return response
+- `getName()`: Returns handler name (for display)
+- `getDescription()`: Returns handler description
+- `init()`: Initialization callback, called after loading JAR
+- `destroy()`: Destroy callback, called before unloading JAR
 
 ---
 
@@ -395,12 +481,51 @@ This is the quickest way to create Mock rules.
 2. Find the request you want to mock
 3. Right-click on the request
 4. Select **Send to Mock** from the context menu
-5. The extension automatically creates a static Mock rule:
-   - Rule Name: Auto-generated based on URL
+5. Based on settings, the extension will:
+   - **Enable Dialog Editing** (default): Open the rule editor with pre-filled request info, allowing direct editing before saving
+   - **Disable Dialog Editing**: Automatically create a static Mock rule without showing the editor
+
+### Dialog Editing Mode (Recommended)
+
+When **Show Send to Mock Dialog** option is enabled:
+
+1. Right-click on a request and select **Send to Mock**
+2. A rule editor pops up, pre-filled with:
+   - Rule Name: Auto-generated based on URL (automatically truncates超长 URLs)
    - Match Condition: Set to the request's URL (Contains match)
    - Response Configuration: Uses the actual response content from the request
-6. Switch to the HelloMocker Rules tab to see the newly created rule
-7. Double-click the rule to edit it
+   - HTTP Editor: Uses Burp native editor to display response, supporting Raw/Headers/Hex views
+3. In the editor, you can:
+   - Modify rule name and match conditions
+   - Edit response content in the HTTP editor (supports Chinese, auto-detects encoding)
+   - Switch response types (Static/Python/Proxy/JAR)
+4. Click **Save** to save the rule
+
+**Advantages**:
+- Preview and edit response content before creating
+- Avoid creating rules that don't meet requirements
+- Support direct editing of Chinese content in response body (UTF-8 encoding)
+
+### Silent Creation Mode
+
+When **Show Send to Mock Dialog** option is disabled:
+
+1. Right-click on a request and select **Send to Mock**
+2. The extension automatically creates a rule without showing the editor
+3. A success message is displayed
+4. You can view and edit it in the Rules tab
+
+### Configure Dialog Option
+
+In the **Settings** tab:
+
+- **Show Send to Mock Dialog**: Check to enable dialog editing, uncheck for silent creation
+- Default: Enabled (recommended)
+
+**Note**: In dialog editing mode, rule names are automatically truncated:
+- Removes URL query parameters (`?key=value` part)
+- If path exceeds 30 characters, keeps the last 30 characters (adding `...` at the front)
+- Example: `/api/v1/users/12345/profile?token=xxx` → `...sers/12345/profile`
 
 ### Use Cases
 
@@ -411,6 +536,22 @@ This is the quickest way to create Mock rules.
 ---
 
 ## Rule Management
+
+### Toolbar Buttons
+
+The rule list toolbar provides the following action buttons:
+
+| Button | Function | Description |
+|--------|----------|-------------|
+| **Add** | Add Rule | Open rule editor to create a new rule |
+| **Import** | Import Rules | Import rules from JSON file |
+| **Export** | Export Rules | Export rules to JSON file |
+| **Edit** | Edit Rule | Edit selected rule (double-click also works) |
+| **Delete** | Delete Rule | Delete selected rule |
+| **Up** | Move Up | Move selected rule up one position in the list |
+| **Down** | Move Down | Move selected rule down one position in the list |
+
+**Note**: Edit, Delete, Up, and Down buttons require a rule to be selected in the table first.
 
 ### Enabling/Disabling Rules
 
@@ -468,6 +609,7 @@ Methods to adjust priority:
 | Script Timeout | Maximum execution time for Python scripts (milliseconds), will be terminated if exceeded | 30000 |
 | Max Rules | Maximum number of rules allowed, prevents memory overflow | 1000 |
 | Enable Logging | Whether to output detailed debug logs | true |
+| Show Send to Mock Dialog | Whether to show edit dialog after right-click Send to Mock | true |
 
 ### Configuration Persistence
 
@@ -644,6 +786,47 @@ Currently, the extension does not have a one-click clear feature. You can:
 
 1. **Manual Deletion**: Select rules and click Delete button one by one
 2. **Import Empty File**: Create a JSON file containing an empty array `[]` and import it
+
+### Q8: JAR extension failed to load?
+
+**Possible Causes and Solutions**:
+
+1. **Incorrect JAR file path**
+   - Check if the JAR file path is correct
+   - Use the Browse button to select the file
+
+2. **Incorrect class name**
+   - Ensure you entered the full qualified class name (including package)
+   - Example: `com.example.MyHandler` not `MyHandler`
+
+3. **IMockHandler interface not implemented**
+   - Check if the class implements the `IMockHandler` interface
+   - Check if the JAR includes plugin API dependencies
+
+4. **Missing no-arg constructor**
+   - Ensure the handler class has a public no-arg constructor
+
+5. **Dependency conflicts**
+   - Check if the JAR contains dependencies conflicting with BurpSuite
+   - When packaging with Maven Shade plugin, you can exclude conflicting dependencies
+
+### Q9: Chinese characters display as garbled text?
+
+**Solutions**:
+
+1. **Ensure Content-Type includes charset=UTF-8**
+   - Add to response headers: `Content-Type: application/json; charset=UTF-8`
+
+2. **Use UTF-8 encoding for import/export**
+   - The extension automatically handles encoding, ensure editors and files use UTF-8
+
+3. **Use UTF-8 in Python scripts**
+   - Add at beginning of file: `# -*- coding: utf-8 -*-`
+   - Use Unicode for Chinese strings: `u"Chinese"`
+
+4. **Garbled text in Burp editor**
+   - The extension automatically adds charset=UTF-8
+   - Ensure the original response contains correct charset declaration
 
 ---
 

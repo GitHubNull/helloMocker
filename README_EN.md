@@ -14,9 +14,13 @@ HelloMocker is a powerful BurpSuite HTTP Mock extension that supports dynamic re
   - Static Response: Return configured response content directly
   - Python Script: Execute Python files to generate responses dynamically
   - Proxy Forward: Forward requests to upstream servers
+  - JAR Extension: Load custom JAR packages to handle requests (Stage 6)
 - 📂 **Python Script Support**: Import Python scripts from files with preview functionality
-- 🖱️ **Right-Click Quick Action**: Quickly create Mock rules from Proxy History
-- 💾 **Configuration Persistence**: Rules saved in JSON format with import/export support
+- 📦 **JAR Extension Support**: Load custom JAR packages to implement complex business logic (P2 feature)
+- 🖱️ **Right-Click Quick Action**: Quickly create Mock rules from Proxy History with dialog editing support
+- 🎨 **Burp Native Editor**: Use BurpSuite native HTTP editor to edit response content
+- 📝 **Smart URL Handling**: Automatically truncate超长 URLs to prevent overly long rule names
+- 💾 **Configuration Persistence**: Rules saved in JSON format with import/export support, body encoded in Base64
 
 ## 📸 Interface Preview
 
@@ -204,6 +208,61 @@ Issues and Pull Requests are welcome!
 ## 📄 License
 
 This project is licensed under the [MIT](LICENSE) License.
+
+## 📦 JAR Extension Development (Stage 6)
+
+HelloMocker supports loading custom JAR packages to implement complex request processing logic.
+
+### Quick Start
+
+1. **Implement the IMockHandler Interface**
+
+```java
+package com.example;
+
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
+import org.oxff.hellomocker.api.IMockHandler;
+
+public class MyHandler implements IMockHandler {
+    
+    @Override
+    public HttpResponse handleRequest(HttpRequest request) {
+        // Custom processing logic
+        String body = "{\"message\": \"Hello from JAR\"}";
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: application/json\r\n\r\n" +
+                body;
+        return HttpResponse.httpResponse(response);
+    }
+    
+    @Override
+    public String getName() {
+        return "My Custom Handler";
+    }
+}
+```
+
+2. **Package as JAR**
+
+```bash
+mvn clean package
+```
+
+3. **Use in the Plugin**
+   - Create/edit a rule and select **JAR_EXTENSION** response type
+   - Configure the JAR file path and handler class name (e.g., `com.example.MyHandler`)
+   - Click **Load** to load the handler
+
+### Interface Documentation
+
+**IMockHandler Interface Methods:**
+
+- `handleRequest(HttpRequest request)`: Process request and return response
+- `getName()`: Return handler name
+- `getDescription()`: Return handler description
+- `init()`: Initialization callback (optional)
+- `destroy()`: Destroy callback (optional)
 
 ## 🙏 Acknowledgments
 

@@ -14,9 +14,13 @@ HelloMocker 是一款功能强大的 BurpSuite HTTP Mock 插件，支持通过 P
   - 静态响应：直接返回配置的响应内容
   - Python 脚本：执行 Python 文件动态生成响应
   - 代理转发：将请求转发到上游服务器
+  - JAR 扩展：加载自定义 JAR 包处理请求（Stage 6）
 - 📂 **Python 脚本支持**：从文件导入 Python 脚本，支持查看脚本内容
-- 🖱️ **右键快捷操作**：在 Proxy History 中右键快速创建 Mock 规则
-- 💾 **配置持久化**：规则以 JSON 格式保存，支持导入导出
+- 📦 **JAR 扩展支持**：加载自定义 JAR 包实现复杂业务逻辑（P2 功能）
+- 🖱️ **右键快捷操作**：在 Proxy History 中右键快速创建 Mock 规则，支持弹窗编辑
+- 🎨 **Burp 原生编辑器**：使用 BurpSuite 原生 HTTP 编辑器编辑响应内容
+- 📝 **智能 URL 处理**：自动截断超长 URL，防止规则名称过长
+- 💾 **配置持久化**：规则以 JSON 格式保存，支持导入导出，body 使用 Base64 编码
 
 ## 📸 界面预览
 
@@ -204,6 +208,61 @@ helloMocker/
 ## 📄 开源协议
 
 本项目采用 [MIT](LICENSE) 协议开源。
+
+## 📦 JAR 扩展开发（Stage 6）
+
+HelloMocker 支持加载自定义 JAR 包实现复杂的请求处理逻辑。
+
+### 快速开始
+
+1. **实现 IMockHandler 接口**
+
+```java
+package com.example;
+
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
+import org.oxff.hellomocker.api.IMockHandler;
+
+public class MyHandler implements IMockHandler {
+    
+    @Override
+    public HttpResponse handleRequest(HttpRequest request) {
+        // 自定义处理逻辑
+        String body = "{\"message\": \"Hello from JAR\"}";
+        String response = "HTTP/1.1 200 OK\r\n" +
+                "Content-Type: application/json\r\n\r\n" +
+                body;
+        return HttpResponse.httpResponse(response);
+    }
+    
+    @Override
+    public String getName() {
+        return "My Custom Handler";
+    }
+}
+```
+
+2. **打包 JAR**
+
+```bash
+mvn clean package
+```
+
+3. **在插件中使用**
+   - 创建/编辑规则，选择 **JAR_EXTENSION** 响应类型
+   - 配置 JAR 文件路径和处理器类名（如：`com.example.MyHandler`）
+   - 点击 **Load** 加载处理器
+
+### 接口说明
+
+**IMockHandler 接口方法：**
+
+- `handleRequest(HttpRequest request)`: 处理请求并返回响应
+- `getName()`: 返回处理器名称
+- `getDescription()`: 返回处理器描述
+- `init()`: 初始化回调（可选）
+- `destroy()`: 销毁回调（可选）
 
 ## 🙏 致谢
 
