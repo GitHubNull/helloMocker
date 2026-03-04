@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>helloMocker-example-handler</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>HelloMocker Example Handler</name>
+    <description>Example JAR extension for HelloMocker plugin</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <helloMocker.version>1.0.0</helloMocker.version>
+        <montoya.api.version>2023.10.2</montoya.api.version>
+    </properties>
+
+    <dependencies>
+        <!-- HelloMocker API -->
+        <dependency>
+            <groupId>oxff.org</groupId>
+            <artifactId>helloMocker-api</artifactId>
+            <version>${helloMocker.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- BurpSuite Montoya API (provided by BurpSuite) -->
+        <dependency>
+            <groupId>net.portswigger.burp.extensions</groupId>
+            <artifactId>montoya-api</artifactId>
+            <version>${montoya.api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                </configuration>
+            </plugin>
+
+            <!-- Shade Plugin to create fat JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <minimizeJar>true</minimizeJar>
+                            <!-- Exclude provided dependencies from fat JAR -->
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>oxff.org:helloMocker-api</exclude>
+                                    <exclude>net.portswigger.burp.extensions:montoya-api</exclude>
+                                </excludes>
+                            </artifactSet>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </repository>
+        
+        <!-- Local repository for HelloMocker API (install locally first) -->
+        <repository>
+            <id>local-repo</id>
+            <name>Local Repository</name>
+            <url>file://${project.basedir}/../../helloMocker-api/target</url>
+        </repository>
+    </repositories>
+</project>
