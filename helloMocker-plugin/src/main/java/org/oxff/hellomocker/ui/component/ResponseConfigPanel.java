@@ -33,6 +33,7 @@ public class ResponseConfigPanel extends JPanel {
     private org.fife.ui.rsyntaxtextarea.RSyntaxTextArea pythonEditor;
     private JTextField pythonFileField;
     private JPanel previewPanel;
+    private JComboBox<String> pythonModeCombo;
 
     // 代理转发面板组件
     private JTextField targetHostField;
@@ -102,9 +103,9 @@ public class ResponseConfigPanel extends JPanel {
         JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         modePanel.add(new JLabel("Script Mode:"));
         String[] modes = {"Online Editor", "Import File"};
-        JComboBox<String> modeCombo = new JComboBox<>(modes);
-        modeCombo.addActionListener(e -> togglePythonMode(modeCombo.getSelectedIndex()));
-        modePanel.add(modeCombo);
+        pythonModeCombo = new JComboBox<>(modes);
+        pythonModeCombo.addActionListener(e -> togglePythonMode(pythonModeCombo.getSelectedIndex()));
+        modePanel.add(pythonModeCombo);
         topPanel.add(modePanel, BorderLayout.NORTH);
         
         // 文件导入面板（默认隐藏）
@@ -547,6 +548,10 @@ public class ResponseConfigPanel extends JPanel {
                 if (!filePath.isEmpty()) {
                     builder.pythonFilePath(filePath);
                 }
+                // 保存脚本模式（0=在线编辑，1=文件导入）
+                if (pythonModeCombo != null) {
+                    builder.pythonScriptMode(pythonModeCombo.getSelectedIndex());
+                }
             }
             case PROXY_FORWARD -> {
                 builder.targetHost(targetHostField.getText().trim());
@@ -592,6 +597,12 @@ public class ResponseConfigPanel extends JPanel {
                 }
                 if (config.getPythonFilePath() != null) {
                     pythonFileField.setText(config.getPythonFilePath());
+                }
+                // 恢复脚本模式
+                if (pythonModeCombo != null) {
+                    int mode = config.getPythonScriptMode();
+                    pythonModeCombo.setSelectedIndex(mode);
+                    togglePythonMode(mode);
                 }
             }
             case PROXY_FORWARD -> {

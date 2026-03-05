@@ -42,6 +42,12 @@ public class ResponseConfig implements Serializable {
      */
     private String pythonFilePath;
 
+    /**
+     * Python脚本模式（0=在线编辑模式，1=文件导入模式）
+     */
+    @Builder.Default
+    private int pythonScriptMode = 0;
+
     // ============ 静态响应模式配置 ============
 
     /**

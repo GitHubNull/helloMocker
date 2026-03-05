@@ -7,6 +7,7 @@ import org.oxff.hellomocker.storage.ConfigStorage;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -26,6 +27,7 @@ public class PythonEngine {
 
     // Python脚本包装模板
     private static final String PYTHON_WRAPPER_TEMPLATE = """
+# -*- coding: utf-8 -*-
 import sys
 import json
 import base64
@@ -48,7 +50,7 @@ if __name__ == "__main__":
                 "headers": {"Content-Type": "text/plain"},
                 "body": "Error: handle_request must return a dictionary"
             }
-        
+
         # 序列化输出
         output = json.dumps(result)
         print(output)
@@ -158,10 +160,8 @@ if __name__ == "__main__":
             tempScript.deleteOnExit();
 
             try {
-                // 写入脚本
-                try (FileWriter writer = new FileWriter(tempScript)) {
-                    writer.write(script);
-                }
+                // 写入脚本（使用UTF-8编码）
+                Files.write(tempScript.toPath(), script.getBytes(StandardCharsets.UTF_8));
 
                 // 构建进程
                 ProcessBuilder pb = new ProcessBuilder(
